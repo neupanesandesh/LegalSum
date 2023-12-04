@@ -72,7 +72,7 @@ def main():
                 {"role": "user", "content": user_input}
                 ]
             )
-            summary = " (" + judge_response.choices[0].message.content + ") " + str(page_count) + "(pp.) "  + summary 
+            summary = " (" + judge_response.choices[0].message.content + ") (" + str(page_count) + "pp.) "  + summary 
             print (judge_response.choices[0].message.content)
             
             # court option
