@@ -5,7 +5,7 @@ import openai
 openai.api_key = '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'
 
 # Define the Streamlit app
-#def main():
+def main():
     st.title("Legal Decision Summarizer")
 
     # Create a text input field for the legal decision
