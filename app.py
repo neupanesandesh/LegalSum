@@ -2,7 +2,7 @@ import streamlit as st
 import openai
 
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
-openai.api_key = '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'
+#openai.api_key = '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'
 
 # Define the Streamlit app
 def main():
