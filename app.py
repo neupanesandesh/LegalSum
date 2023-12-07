@@ -51,7 +51,7 @@ def main():
                 temperature=0.2,
                 max_tokens=16,
                 messages=[
-                    {"role": "system", "content": "When did the judgment happen? (Answer with the date only)"},
+                    {"role": "system", "content": "When did the judgment happen, if you can't find, look for filled date, also answer with the date only, nothing else, no additional text, just the date"},
                     {"role": "user", "content": user_input}
                 ]
             )
