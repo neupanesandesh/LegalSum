@@ -22,18 +22,18 @@ def main():
             # Define the context for the summary
             context = ('you are a US lawyer that makes summaries according a specific structure. Here are the instructions :'
             'the summary can be characterised as a case digest or a case brief. It is a concise restatement of the essential elements of the court''s decision, including:'
-            '1. The procedural context (2 -3 sentences)'
-            '2. The factual background (  2- 3  sentences)'
-            '3. The legal arguments presented ( 2 sentences )'
-            '3. The trial court''s findings  ( 3- 4 sentences)'
-            '4. The  court''s decision ( 2 sentences)' 
+            '1. The procedural context (2 - 4 sentences)'
+            '2. The factual background (2 - 4  sentences)'
+            '3. The legal arguments presented (2 - 4 sentences )'
+            '4. The trial court''s findings  (2 - 4 sentences)'
+            '5. The  court''s decision (2 - 4 sentences)' 
             'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also avoiding using names, but using roles like : plaintiff, defendent etc... use names to mention a third party for example. Also don’t use formulas like : in this case, judgment.'
             'Answer in a professional way, not using too many words, don''t invent, stick to the facts, keep it short.')
 
             # Call the OpenAI API to generate a summary
             response = openai.ChatCompletion.create(
                 model="gpt-4-1106-preview",
-                temperature=0.2,
+                temperature=0.0,
                 max_tokens=600,
                 messages=[
                     {"role": "system", "content": context},
