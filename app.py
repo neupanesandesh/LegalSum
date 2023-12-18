@@ -28,8 +28,8 @@ def main():
             '3. The legal arguments presented (2 - 4 sentences )'
             '4. The trial court''s findings  (2 - 4 sentences)'
             '5. The  court''s decision (2 - 4 sentences)' 
-            'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also avoiding using names, but using roles like : plaintiff, defendent etc... use names to mention a third party for example. Also don’t use formulas like : in this case, judgment.'
-            'Answer in a professional way, not using too many words, don''t invent, stick to the facts, keep it short.')
+            'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed. Also don’t use formulas like : in this case, judgment.'
+            'Answer in a professional way, don''t invent, stick to the facts.')
 
             # Call the OpenAI API to generate a summary
             response = openai.ChatCompletion.create(
