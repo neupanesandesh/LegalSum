@@ -1,4 +1,5 @@
 import streamlit as st
+from nameparser import HumanName
 import openai
 
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
@@ -28,7 +29,7 @@ def main():
             '3. The legal arguments presented (2 - 4 sentences )'
             '4. The trial court''s findings  (2 - 4 sentences)'
             '5. The  court''s decision (2 - 4 sentences)' 
-            'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed. Also don’t use formulas like : in this case, judgment.'
+            'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed. Also don''t use formulas like : in this case, judgment. Do not need to repeat the name of the case. Don''t need to write out the whole name of the court'
             'Answer in a professional way, don''t invent, stick to the facts.')
 
             # Call the OpenAI API to generate a summary
@@ -44,6 +45,8 @@ def main():
 
             # Display the generated summary
             summary = response.choices[0].message.content.strip()
+            
+            summary = summary.replace("District Court", "district court")
             st.subheader("Summary:")
 
             # Extract the court date
@@ -52,7 +55,7 @@ def main():
                 temperature=0.2,
                 max_tokens=16,
                 messages=[
-                    {"role": "system", "content": "When did the judgment happen, if you can't find, look for filled date, also answer with the date only, nothing else, no additional text, just the date"},
+                    {"role": "system", "content": "When did the judgment happen, if you can't find, look for filled date, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
                     {"role": "user", "content": user_input}
                 ]
             )
@@ -62,7 +65,7 @@ def main():
             summary = summary + " [" + court_date + "]"
             
             # judge
-            prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else"
+            prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname)"
 
             judge_response = openai.ChatCompletion.create(
             model = "gpt-4-1106-preview",
@@ -73,7 +76,11 @@ def main():
                 {"role": "user", "content": user_input}
                 ]
             )
-            summary = " (" + judge_response.choices[0].message.content + ") (" + str(page_count) + " pp.) "  + summary 
+            
+            name = HumanName(judge_response.choices[0].message.content)
+            judge_name = name.last + ", " + name.first[0]+ "."  #.capitalize()
+            
+            summary = " (" + judge_name + ") (" + str(page_count) + " pp.) "  + summary 
             print (judge_response.choices[0].message.content)
             
             # court option
@@ -127,6 +134,7 @@ def main():
             Authority Auth.
             Automo[bile, tive] Auto.
             Avenue Ave.
+            Attorney Atty.
             B
             Board Bd.
             Broadcast[ing] Broad.
@@ -299,6 +307,7 @@ def main():
             Uniform Unif.
             University Univ.
             Utility Util.
+            United States U.S.
             V
             Village Vill.
             W
@@ -317,7 +326,10 @@ def main():
                 ]
             )
             print (title_response.choices[0].message.content)
-            summary = title_response.choices[0].message.content + ", "  + summary 
+            
+            title_case = (f"*{title_response.choices[0].message.content}*")
+            
+            summary = title_case + ", "  + summary 
             
             # taxonomy
             prompt_taxonomy = """ I will give you a table with taxonomy , just return the corresponding number , nothing else. here is the table :
@@ -385,6 +397,61 @@ def main():
             print (taxonomy_response.choices[0].message.content)
             summary = taxonomy_response.choices[0].message.content + "-" + court_response.choices[0].message.content + "-XXXX " + summary
             
+            hash_table = {
+                "01": "Administrative Law",
+                "54": "Admiralty",
+                "59": "Antitrust",
+                "06": "Banking and Finance Laws",
+                "42": "Bankruptcy",
+                "07": "Civil Procedure",
+                "46": "Civil Rights",
+                "08": "Commercial Law",
+                "10": "Constitutional Law",
+                "09": "Consumer Protection",
+                "11": "Contracts; Contractual Disputes",
+                "12": "Corporate Entities; Corporate Governance",
+                "15": "Creditors' and Debtors' Rights",
+                "14": "Criminal Law",
+                "31": "Damages; Personal Injury",
+                "03": "Dispute Resolution",
+                "16": "Education Law",
+                "60": "Elder Law",
+                "39": "Employment Benefits; Employment Litigation",
+                "62": "Employment Compliance; Employment Litigation",
+                "55": "Entertainment and Sports Law",
+                "17": "Environmental Law",
+                "19": "Evidence",
+                "20": "Family Law",
+                "21": "Government",
+                "22": "Health Care Law",
+                "51": "Immigration Law",
+                "23": "Insurance Law",
+                "53": "Intellectual Property",
+                "61": "Internet Law",
+                "48": "Judges",
+                "04": "Judges; Legal Ethics and Attorney Discipline; Legal Malpractice",
+                "56": "Labor Law; Employment Benefits",
+                "25": "Labor Law; Employment Compliance; Employment Litigation",
+                "26": "Land Use and Planning",
+                "27": "Landlord/Tenant",
+                "36": "Mass Tort Claims; Motor Vehicle Torts; Toxic Torts; Business Torts; Damages",
+                "29": "Medical Malpractice",
+                "05": "Motor Vehicle Torts",
+                "32": "Products Liability",
+                "52": "Public Records",
+                "37": "Public Utilities",
+                "34": "Real Estate",
+                "50": "Securities",
+                "35": "Tax",
+                "57": "Telecommunications",
+                "49": "Transportation",
+                "38": "Trusts and Estates",
+                "40": "Wrongful Death"
+            }
+            
+            legal_category = hash_table.get(taxonomy_response.choices[0].message.content, "Unknown code").upper()
+            
+            st.markdown(f"**{legal_category}**")
             st.write(summary)
         else:
             st.warning("Please select a state before clicking 'Summarize'.")
