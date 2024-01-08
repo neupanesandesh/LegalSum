@@ -3,7 +3,7 @@ from nameparser import HumanName
 import openai
 
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
-openai.api_key = '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'
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Function to validate if the input is a positive integer
 def is_positive_integer(value):
