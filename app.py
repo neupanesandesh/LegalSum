@@ -5,6 +5,14 @@ import openai
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
 openai.api_key = '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'
 
+# Function to validate if the input is a positive integer
+def is_positive_integer(value):
+    try:
+        value = int(value)
+        return value > 0
+    except ValueError:
+        return False
+    
 # Define the Streamlit app
 def main():
     st.image('MESJ.jpg')
@@ -14,7 +22,17 @@ def main():
     user_input = st.text_area("Enter legal decision:", height=150) 
     
     # Create a numeric input for the page count
-    page_count = st.number_input("Page count:", min_value=1, value=1, step=1)
+    #page_count = st.number_input("Page count:", min_value=1, value=1, step=1)
+    
+    # Create a text input for the page count
+    page_count_input = st.text_input("Page count:", value="1")
+
+    # Validate the input
+    if is_positive_integer(page_count_input):
+        page_count = int(page_count_input)
+        # Continue with your logic using page_count
+    else:
+        st.error("Please enter a valid positive integer for the page count.")
     
     # Create a dropdown to select the US State
     state = st.selectbox("Select a US State:", ["New Jersey"])
@@ -55,7 +73,7 @@ def main():
                 temperature=0.2,
                 max_tokens=16,
                 messages=[
-                    {"role": "system", "content": "When did the judgment happen, if you can't find, look for filled date, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
+                    {"role": "system", "content": "When did the judgment happen, if you can't find, look for decided date, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
                     {"role": "user", "content": user_input}
                 ]
             )
@@ -65,7 +83,7 @@ def main():
             summary = summary + " [" + court_date + "]"
             
             # judge
-            prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname)"
+            prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam"
 
             judge_response = openai.ChatCompletion.create(
             model = "gpt-4-1106-preview",
@@ -77,8 +95,13 @@ def main():
                 ]
             )
             
-            name = HumanName(judge_response.choices[0].message.content)
-            judge_name = name.last + ", " + name.first[0]+ "."  #.capitalize()
+            judge_name ="" 
+            
+            if judge_response.choices[0].message.content =="per curiam" :
+                judge_name = "per curiam"
+            else:
+                name = HumanName(judge_response.choices[0].message.content)
+                judge_name = name.last + ", " + name.first[0]+ "."  #.capitalize()
             
             summary = " (" + judge_name + ") (" + str(page_count) + " pp.) "  + summary 
             print (judge_response.choices[0].message.content)
@@ -121,7 +144,7 @@ def main():
             summary = courts_inverted[int(court_response.choices[0].message.content)] + " "  + summary
             
             prompt_title = """
-            Give the title of the legal case, use the following abreviation table if it occurs
+            Give the title of the legal case, no need to pull in all of the defendants, just the first one , and if it is a person just his last name. Use the following abreviation table if it occurs
             A
             Academy Acad.
             Administrat[ive,ion] Admin.
