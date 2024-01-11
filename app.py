@@ -64,6 +64,7 @@ def main():
             # Display the generated summary
             summary = response.choices[0].message.content.strip()
             
+            summary = summary.replace("$", "&#36;") # avoiding issues
             summary = summary.replace("District Court", "district court")
             st.subheader("Summary:")
 
