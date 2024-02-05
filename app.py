@@ -257,7 +257,6 @@ def Texas_summarizer(value):
     summary = summary.replace("District Court", "district court")
     
     prompt_taxonomy = """ I will give you a table with taxonomy , read the legal case, You can use up to three taxonomies. The last topic is usually Civil Appeals or Criminal Appeals. The format is caps and lower case. Just return up to 3 taxonomies, separated by "│", example :  Wrongful Death│Civil Rights│Civil Appeals. Here is the table of taxonomy :
-            Taxonomy Table
             Administrative Law
             Admiralty
             Antitrust
