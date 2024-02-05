@@ -307,6 +307,8 @@ def Texas_summarizer(value):
             Transportation
             Trusts and Estates
             Wrongful Death
+            Civil Appeals
+            Criminal Appeals
             """
     taxonomy_response = openai.ChatCompletion.create(
     model = "gpt-4-turbo-preview",
