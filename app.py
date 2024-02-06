@@ -30,6 +30,46 @@ def text_summarizer(value):
     
     return response.choices[0].message.content.strip()
 
+def text_summarizer_alternate(value):
+     # Define the context for the summary
+    context = ('you are a US lawyer that makes summaries according a specific structure. Here are the instructions :'
+    'the summary can be characterised as a case digest or a case brief. It is a concise restatement of the essential elements of the court''s decision, including:'
+    '1. The procedural context (2 - 4 sentences)'
+    '2. The factual background (2 - 4  sentences)'
+    '3. The legal arguments presented (2 - 4 sentences )'
+    '4. The trial court''s findings  (2 - 4 sentences)'
+    '5. The  court''s decision (2 - 4 sentences)' 
+    'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed. Also don''t use formulas like : in this case, judgment. Do not need to repeat the name of the case. Don''t need to write out the whole name of the court, however if you have to use it replace it by : the court'
+    'Answer in a professional way, don''t invent, stick to the facts.')
+    
+    context = context + """
+    In your summary, please ensure the following key aspects are addressed:
+    Legal Proceedings Accuracy: Detail the sequence and timing of key legal events, including pre-trial motions, trial proceedings, and post-trial decisions. Highlight any procedural nuances that are critical to understanding the case's context.   
+    Detailed Fact Consideration: Include a thorough overview of the factual background of the case. Emphasize key facts that were pivotal in the court's decision-making process, especially those relevant to any summary judgment considerations.
+
+    Clarity and Readability:
+
+    Jurisdictional Clarity: Clearly distinguish between different types of jurisdiction (e.g., subject matter, personal) involved in the case and their implications.
+    Legal Standards and Acts: Accurately describe and reference the legal standards and acts applied in the case, ensuring that their relevance and impact on the case are clearly explained.
+    Factual vs. Legal Findings: Differentiate between the court's factual findings and legal rulings. Clarify how these findings influenced the case outcome.
+    Semantic Precision: Use precise and appropriate legal terminology throughout the summary. Pay close attention to the semantic implications of legal language and ensure that the summary accurately reflects the nuances and complexities of the case.
+
+    Please balance the need for detailed legal analysis with the conciseness expected in a summary, ensuring that the final output is both informative and accessible to legal professionals
+    """
+
+    # Call the OpenAI API to generate a summary
+    response = openai.ChatCompletion.create(
+        model="gpt-4-turbo-preview",
+        temperature=0.0,
+        max_tokens=600,
+        messages=[
+            {"role": "system", "content": context},
+            {"role": "user", "content": value}
+        ]
+    )
+    
+    return response.choices[0].message.content.strip()
+
 def title(value):
 
     title_case=""
@@ -249,7 +289,7 @@ def Texas_summarizer(value):
     summary =""
     
     # Display the generated summary
-    summary = text_summarizer(value)
+    summary = text_summarizer_alternate(value)
     
     print(summary)
     
