@@ -5,6 +5,13 @@ import openai
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
+def remove_suffix(s):
+    if s.endswith("CV"):
+        return s[:-3]  # Remove last 2 characters
+    elif s.endswith("CR"):
+        return s[:-3]  # Remove last 2 characters
+    return s
+
 def text_summarizer(value):
      # Define the context for the summary
     context = ('you are a US lawyer that makes summaries according a specific structure. Here are the instructions :'
@@ -39,8 +46,12 @@ def text_summarizer_alternate(value):
     '3. The legal arguments presented (2 - 4 sentences )'
     '4. The trial court''s findings  (2 - 4 sentences)'
     '5. The  court''s decision (2 - 4 sentences)' 
-    'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed. Also don''t use formulas like : in this case, judgment. Do not need to repeat the name of the case. Don''t need to write out the whole name of the court, however if you have to use it replace it by : the court'
-    'Answer in a professional way, don''t invent, stick to the facts.')
+    'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case.' 
+    'The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed.'
+    'Also don''t use formulas like : in this case, judgment. Do not need to repeat the name of the case. Don''t need to write out the whole name of the court, however if you have to use it replace it by : the court'
+    'Answer in a professional way, don''t invent, stick to the facts.'
+    'if you copy text from the orginal case put into quotes " " .'
+    'Keep it between 195-325 tokens.')
     
     context = context + """
     In your summary, please ensure the following key aspects are addressed:
@@ -397,7 +408,9 @@ def Texas_summarizer(value):
         ]
     )
     print (case_number_response.choices[0].message.content)
-    summary = summary + ", " + case_number_response.choices[0].message.content
+    
+    case_num = remove_suffix(case_number_response.choices[0].message.content)
+    summary = summary + ", " + case_num
     
     # Extract the court date
     date_response = openai.ChatCompletion.create(
