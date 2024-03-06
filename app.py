@@ -48,7 +48,7 @@ def text_summarizer_alternate(value):
     '5. The  court''s decision (2 - 4 sentences)' 
     'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case.' 
     'The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed.'
-    'Also don''t use formulas like : in this case, judgment. Do not need to repeat the name of the case. Don''t need to write out the whole name of the court, however if you have to use it replace it by : the court'
+    'Also don''t use formulas like : in this case, judgment. Do not need to repeat the name of the case.'
     'Answer in a professional way, don''t invent, stick to the facts.'
     'if you copy text from the orginal case put into quotes " " .'
     'Keep it between 195-325 tokens.')
@@ -86,7 +86,10 @@ def title(value):
     title_case=""
     
     prompt_title = """
-            Give the title of the legal case, no need to pull in all of the defendants, just the first one , and if it is a person just his last name. Use the following abreviation table if it occurs
+            Give the title of the legal case, no need to pull in all of the defendants, just the first one , and if it is a person just his last name. 
+            If it is a State of the USA, just mention the State name.
+            
+            Use the following abreviation table if it occurs
             A
             Academy Acad.
             Administrat[ive,ion] Admin.
@@ -318,16 +321,21 @@ def Texas_summarizer(value):
             Commercial Law
             Constitutional Law
             Consumer Protection
-            Contracts; Contractual Disputes
-            Corporate Entities; Corporate Governance
+            Contracts
+            Contractual Disputes
+            Corporate Entities
+            Corporate Governance
             Creditors' and Debtors' Rights
             Criminal Law
-            Damages; Personal Injury
+            Damages
+            Personal Injury
             Dispute Resolution
             Education Law
             Elder Law
-            Employment Benefits; Employment Litigation
-            Employment Compliance; Employment Litigation
+            Employment Benefits
+            Employment Litigation
+            Employment Compliance
+            Employment Litigation
             Entertainment and Sports Law
             Environmental Law
             Evidence
@@ -339,12 +347,19 @@ def Texas_summarizer(value):
             Intellectual Property
             Internet Law
             Judges
-            Judges; Legal Ethics and Attorney Discipline; Legal Malpractice
-            Labor Law; Employment Benefits
-            Labor Law; Employment Compliance; Employment Litigation
+            Legal Ethics and Attorney Discipline
+            Legal Malpractice
+            Labor Law
+            Employment Benefits
+            Employment Compliance
+            Employment Litigation
             Land Use and Planning
             Landlord/Tenant
-            Mass Tort Claims; Motor Vehicle Torts; Toxic Torts; Business Torts; Damages
+            Mass Tort Claims
+            Motor Vehicle Torts
+            Toxic Torts
+            Business Torts
+            Damages
             Medical Malpractice
             Motor Vehicle Torts
             Products Liability
@@ -382,7 +397,9 @@ def Texas_summarizer(value):
             Court of Criminal Appeals
             First Court of Appeals
             Second Court of Appeals 
-            etc etc through the Fourteenth Court of Appeals                
+            ...
+            Fourteenth Court of Appeals
+            [District number] Court of Appeals                
             """)
     court_response = openai.ChatCompletion.create(
     model = "gpt-4-turbo-preview",
