@@ -689,12 +689,47 @@ def Connecticut_summarizer(value):
     
     
     prompt_practice = """
-            Give the industry of the legal case, 
-            
-            
-            
-
-            just return the industry as an answer nothing else
+            I will give you a table with industries, read the legal case, give the industry of the legal case, just return the industry as an answer nothing else. Here is the table of industries:
+            Accounting		
+            Advertising		
+            Aerospace		
+            Agriculture 		
+            Autokotive		
+            Biotechnology		
+            Brokerage		
+            Call Centers		
+            Cargo and Shipping		
+            Chemicals and Materials		
+            Construction		
+            Consumer Products		
+            Defense		
+            Ditribution and Wholesale		
+            E-Commerce		
+            Education		
+            Electronics		
+            Energy		
+            Entertainment and Leisure		
+            Executive Search		
+            Federal Government		
+            Food and Beverage		
+            Hardware (Computer)		
+            Health Care		
+            Hospitatlity and Lodging		
+            Insurance		
+            Investments and Investment Advisory		
+            Legal Services		
+            Manufacturing		
+            Mining and Resources		
+            Non-Profit		
+            Pharmaceuticals		
+            Real Estate		
+            Revruitment and Staffing		
+            Retail		
+            Software		
+            State and Local Government		
+            Technology Media Telecom		
+            Transportation		
+            Travel and Tourism		
             """
             
     practice_response = openai.ChatCompletion.create(
