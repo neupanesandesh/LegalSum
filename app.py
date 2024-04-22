@@ -731,7 +731,7 @@ def Connecticut_summarizer(value):
             Transportation		
             Travel and Tourism		
             """
-            
+                 
     practice_response = openai.ChatCompletion.create(
     model = "gpt-4-turbo-preview",
     temperature = 0.2,
@@ -986,7 +986,8 @@ def main():
             '3. The legal arguments presented (2 - 4 sentences )'
             '4. The trial court''s findings  (2 - 4 sentences)'
             '5. The  court''s decision (2 - 4 sentences)' 
-            'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed. Also don''t use formulas like : in this case, judgment. Do not need to repeat the name of the case. Don''t need to write out the whole name of the court, however if you have to use it replace it by : the court'
+            'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed. Also don''t use formulas like : in this case, judgment.' 
+            'Do not to use the name of the case. Don''t need to write out the whole name of the court, however if you have to use it replace it by : the court'
             'Answer in a professional way, don''t invent, stick to the facts.')
 
             # Call the OpenAI API to generate a summary
@@ -1009,6 +1010,29 @@ def main():
             summary = summary.replace("District Court", "district court")
             st.subheader("Summary:")
 
+            # Type of case federal or State
+            federal_response = openai.ChatCompletion.create(
+                model="gpt-4-turbo-preview",
+                temperature=0.2,
+                max_tokens=16,
+                messages=[
+                    {"role": "system", "content": """
+                    
+                    Determine if the legal case, if related to a state or federal case, the federal cases are these 
+                    Bankr. D.N.J. (U.S Bankruptcy Court) 6
+                    D.N.J. (U.S. District Court) - 7
+                    3d Cir. (Third Circuit) – 8
+                     
+                    If that's a federal case just return Federal, nothing else, if it's a state just retrun State nothing else.
+                    """},
+                    {"role": "user", "content": user_input}
+                ]
+            )
+
+            # Append the court date to the summary
+            court_type = federal_response.choices[0].message.content.strip()
+
+
             # Extract the court date
             date_response = openai.ChatCompletion.create(
                 model="gpt-4-turbo-preview",
@@ -1022,7 +1046,11 @@ def main():
 
             # Append the court date to the summary
             court_date = date_response.choices[0].message.content.strip()
-            summary = summary + " [" + court_date + "]"
+            
+            if court_type =="Federal":
+                summary = summary + " [Filled " + court_date + "]"
+            else:
+                summary = summary + " [" + court_date + "]"    
             
             # judge
             prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam. If it 's a federal case and district case, replace the first name by : U.S.D.J. Else if it 's a federal case and magistrate case, replace the first name by : U.S.M.J."
