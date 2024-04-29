@@ -979,30 +979,31 @@ def main():
     if st.button("Summarize"):
         if state == "New Jersey":
             # Define the context for the summary
-            context = ('you are a US lawyer that makes summaries according a specific structure. Here are the instructions :'
-            'the summary can be characterised as a case digest or a case brief. It is a concise restatement of the essential elements of the court''s decision, including:'
-            '1. The procedural context (2 - 4 sentences)'
-            '2. The factual background (2 - 4  sentences)'
-            '3. The legal arguments presented (2 - 4 sentences )'
-            '4. The trial court''s findings  (2 - 4 sentences)'
-            '5. The  court''s decision (2 - 4 sentences)' 
-            'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed. Also don''t use formulas like : in this case, judgment.' 
-            'Do not to use the name of the case. Don''t need to write out the whole name of the court, however if you have to use it replace it by : the court'
-            'Answer in a professional way, don''t invent, stick to the facts.')
+            # context = ('you are a US lawyer that makes summaries according a specific structure. Here are the instructions :'
+            # 'the summary can be characterised as a case digest or a case brief. It is a concise restatement of the essential elements of the court''s decision, including:'
+            # '1. The procedural context (2 - 4 sentences)'
+            # '2. The factual background (2 - 4  sentences)'
+            # '3. The legal arguments presented (2 - 4 sentences )'
+            # '4. The trial court''s findings  (2 - 4 sentences)'
+            # '5. The  court''s decision (2 - 4 sentences)' 
+            # 'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed. Also don''t use formulas like : in this case, judgment.' 
+            # 'Do not to use the name of the case. Don''t need to write out the whole name of the court, however if you have to use it replace it by : the court'
+            # 'Answer in a professional way, don''t invent, stick to the facts.')
 
-            # Call the OpenAI API to generate a summary
-            response = openai.ChatCompletion.create(
-                model="gpt-4-turbo-preview",
-                temperature=0.0,
-                max_tokens=600,
-                messages=[
-                    {"role": "system", "content": context},
-                    {"role": "user", "content": user_input}
-                ]
-            )
+            # # Call the OpenAI API to generate a summary
+            # response = openai.ChatCompletion.create(
+            #     model="gpt-4-turbo-preview",
+            #     temperature=0.0,
+            #     max_tokens=600,
+            #     messages=[
+            #         {"role": "system", "content": context},
+            #         {"role": "user", "content": user_input}
+            #     ]
+            # ) 
 
             # Display the generated summary
-            summary = text_summarizer(user_input) #response.choices[0].message.content.strip()
+            summary = text_summarizer_alternate(user_input) #
+           
             
             print(summary)
             
@@ -1121,214 +1122,216 @@ def main():
             print (court_response.choices[0].message.content)
             summary = courts_inverted[int(court_response.choices[0].message.content)] + " "  + summary
             
-            prompt_title = """
-            Give the title of the legal case, no need to pull in all of the defendants, just the first one , and if it is a person just his last name. Use the following abreviation table if it occurs
-            A
-            Academy Acad.
-            Administrat[ive,ion] Admin.
-            Administrat[or,rix] Adm&#39;[r,x]
-            America[n] Am.
-            and &amp;
-            Associate Assoc.
-            Association Ass&#39;n
-            Atlantic Atl.
-            Authority Auth.
-            Automo[bile, tive] Auto.
-            Avenue Ave.
-            Attorney Atty.
-            B
-            Board Bd.
-            Broadcast[ing] Broad.
-            Brotherhood Bhd.
-            Brothers Bros.
-            Building Bldg.
-            Business Bus.
-            C
-            Casualty Cas.
-            Cent[er, re] Ctr.
-            Central Cent.
-            Chemical Chem.
-            Coalition Coal.
-            College Coll.
-            Commission Comm&#39;n
-            Commissioner Comm&#39;r
-            Committee Comm.
-            Communication Commc&#39;n
-            Community Cmty.
-            Company Co.
-            Compensation Comp.
+            # prompt_title = """
+            # Give the title of the legal case, no need to pull in all of the defendants, just the first one , and if it is a person just his last name. Use the following abreviation table if it occurs
+            # A
+            # Academy Acad.
+            # Administrat[ive,ion] Admin.
+            # Administrat[or,rix] Adm&#39;[r,x]
+            # America[n] Am.
+            # and &amp;
+            # Associate Assoc.
+            # Association Ass&#39;n
+            # Atlantic Atl.
+            # Authority Auth.
+            # Automo[bile, tive] Auto.
+            # Avenue Ave.
+            # Attorney Atty.
+            # B
+            # Board Bd.
+            # Broadcast[ing] Broad.
+            # Brotherhood Bhd.
+            # Brothers Bros.
+            # Building Bldg.
+            # Business Bus.
+            # C
+            # Casualty Cas.
+            # Cent[er, re] Ctr.
+            # Central Cent.
+            # Chemical Chem.
+            # Coalition Coal.
+            # College Coll.
+            # Commission Comm&#39;n
+            # Commissioner Comm&#39;r
+            # Committee Comm.
+            # Communication Commc&#39;n
+            # Community Cmty.
+            # Company Co.
+            # Compensation Comp.
 
-            Condominium Condo.
-            Congress[ional] Cong.
-            Consolidated Consol.
-            Construction Constr.
-            Continental Cont&#39;l
-            Cooperative Coop.
-            Corporation Corp.
-            Correction[s, al] Corr.
-            D
-            Defense Def.
-            Department Dep&#39;t
-            Detention Det.
-            Development Dev.
-            Director Dir.
-            Distribut[or, ing] Distrib.
-            District Dist.
-            Division Div.
-            E
-            East[ern] E.
-            Econom[ic, ics, ical, y] Econ.
-            Education[al] Educ.
-            Electric[al, ity] Elec.
-            Electronic Elec.
-            Engineer Eng&#39;r
-            Engineering Eng&#39;g
-            Enterprise Enter.
-            Entertainment Ent.
-            Environment Env&#39;t
-            Environmental Envtl.
-            Equality Equal.
-            Equipment Equip.
-            Examiner Exam&#39;r
-            Exchange Exch.
-            Execut[or, rix] Ex&#39;[r, x]
-            Export[er, ation] Exp.
-            F
-            Federal Fed.
-            Federation Fed&#39;n
+            # Condominium Condo.
+            # Congress[ional] Cong.
+            # Consolidated Consol.
+            # Construction Constr.
+            # Continental Cont&#39;l
+            # Cooperative Coop.
+            # Corporation Corp.
+            # Correction[s, al] Corr.
+            # D
+            # Defense Def.
+            # Department Dep&#39;t
+            # Detention Det.
+            # Development Dev.
+            # Director Dir.
+            # Distribut[or, ing] Distrib.
+            # District Dist.
+            # Division Div.
+            # E
+            # East[ern] E.
+            # Econom[ic, ics, ical, y] Econ.
+            # Education[al] Educ.
+            # Electric[al, ity] Elec.
+            # Electronic Elec.
+            # Engineer Eng&#39;r
+            # Engineering Eng&#39;g
+            # Enterprise Enter.
+            # Entertainment Ent.
+            # Environment Env&#39;t
+            # Environmental Envtl.
+            # Equality Equal.
+            # Equipment Equip.
+            # Examiner Exam&#39;r
+            # Exchange Exch.
+            # Execut[or, rix] Ex&#39;[r, x]
+            # Export[er, ation] Exp.
+            # F
+            # Federal Fed.
+            # Federation Fed&#39;n
 
-            Fidelity Fid.
-            Finance[e, ial, ing] Fin.
-            Foundation Found.
-            G
-            General Gen.
-            Government Gov&#39;t
-            Guaranty Guar.
-            H
-            Hospital Hosp.
-            Housing Hous.
-            I
-            Import[er, ation] Imp.
-            Incorporated Inc.
-            Indemnity Indem.
-            Independent Indep.
-            Industr[y, ies, ial] Indus.
-            Information Info.
-            Institut[e, ion] Inst.
-            Insurance Ins.
-            International Int&#39;l
-            Investment Inv.
-            J
-            K
-            L
-            Laboratory Lab.
-            Liability Liab.
-            Limited Ltd.
-            Litigation Litig.
-            M
-            Machine[ry] Mach.
-            Maintenance Maint.
-            Management Mgmt.
-            Manufacturer Mfr.
-            Manufacturing Mfg.
-            Maritime Mar.
-            Market Mkt.
-            Marketing Mktg.
-            Mechanic[al] Mech.
+            # Fidelity Fid.
+            # Finance[e, ial, ing] Fin.
+            # Foundation Found.
+            # G
+            # General Gen.
+            # Government Gov&#39;t
+            # Guaranty Guar.
+            # H
+            # Hospital Hosp.
+            # Housing Hous.
+            # I
+            # Import[er, ation] Imp.
+            # Incorporated Inc.
+            # Indemnity Indem.
+            # Independent Indep.
+            # Industr[y, ies, ial] Indus.
+            # Information Info.
+            # Institut[e, ion] Inst.
+            # Insurance Ins.
+            # International Int&#39;l
+            # Investment Inv.
+            # J
+            # K
+            # L
+            # Laboratory Lab.
+            # Liability Liab.
+            # Limited Ltd.
+            # Litigation Litig.
+            # M
+            # Machine[ry] Mach.
+            # Maintenance Maint.
+            # Management Mgmt.
+            # Manufacturer Mfr.
+            # Manufacturing Mfg.
+            # Maritime Mar.
+            # Market Mkt.
+            # Marketing Mktg.
+            # Mechanic[al] Mech.
 
-            Medic[al, ine] Med.
-            Memorial Mem&#39;l
-            Merchan[t, dise, dising] Merch.
-            Metropolitan Metro.
-            Municipal Mun.
-            Mutual Mut.
-            N
-            National Nat&#39;l
-            North[ern] N.
-            Northeast[ern] Ne.
-            Northwest[ern] Nw.
-            Number No.
-            O
-            Organiz[ation, ing] Org.
-            P
-            Pacific Pac.
-            Partnership P&#39;ship
-            Person[al, nel] Pers.
-            Pharmaceutic[s, al] Pharm.
-            Preserv[e, ation] Pres.
-            Probation Prob.
-            Product[ion] Prod.
-            Professional Prof&#39;l
-            Property Prop.
-            Protection Prot.
-            Public Pub.
-            Publication Publ&#39;n
-            Publishing Publ&#39;g
-            Q
-            R
-            Railroad R.R.
-            Railway Ry.
-            Refining Ref.
-            Regional Reg&#39;l
-            Rehabilitation Rehab.
-            Reproduct[ion, ive] Reprod.
-            Resource[s] Res.
-            Restaurant Rest.
+            # Medic[al, ine] Med.
+            # Memorial Mem&#39;l
+            # Merchan[t, dise, dising] Merch.
+            # Metropolitan Metro.
+            # Municipal Mun.
+            # Mutual Mut.
+            # N
+            # National Nat&#39;l
+            # North[ern] N.
+            # Northeast[ern] Ne.
+            # Northwest[ern] Nw.
+            # Number No.
+            # O
+            # Organiz[ation, ing] Org.
+            # P
+            # Pacific Pac.
+            # Partnership P&#39;ship
+            # Person[al, nel] Pers.
+            # Pharmaceutic[s, al] Pharm.
+            # Preserv[e, ation] Pres.
+            # Probation Prob.
+            # Product[ion] Prod.
+            # Professional Prof&#39;l
+            # Property Prop.
+            # Protection Prot.
+            # Public Pub.
+            # Publication Publ&#39;n
+            # Publishing Publ&#39;g
+            # Q
+            # R
+            # Railroad R.R.
+            # Railway Ry.
+            # Refining Ref.
+            # Regional Reg&#39;l
+            # Rehabilitation Rehab.
+            # Reproduct[ion, ive] Reprod.
+            # Resource[s] Res.
+            # Restaurant Rest.
 
-            Retirement Ret.
-            Road Rd.
-            S
-            Savings Sav.
-            School[s] Sch.
-            Science Sci.
-            Secretary Sec&#39;y
-            Securit[y, ies] Sec.
-            Service Serv.
-            Shareholder S&#39;holder
-            Social Soc.
-            Society Soc&#39;y
-            South[ern] S.
-            Southwest[ern] Sw.
-            Steamship[s] S.S.
-            Street St.
-            Subcommittee Subcomm.
-            Surety Sur.
-            System[s] Sys.
-            T
-            Technology Tech.
-            Telecommunication Telecomm.
-            Tele[phone, graph] Tel.
-            Temporary Temp.
-            Township Twp.
-            Transcontinental Transcon.
-            Transport[ation] Transp.
-            Trustee Tr.
-            Turnpike Tpk.
-            U
-            Uniform Unif.
-            University Univ.
-            Utility Util.
-            United States U.S.
-            V
-            Village Vill.
-            W
-            West[ern] W.
+            # Retirement Ret.
+            # Road Rd.
+            # S
+            # Savings Sav.
+            # School[s] Sch.
+            # Science Sci.
+            # Secretary Sec&#39;y
+            # Securit[y, ies] Sec.
+            # Service Serv.
+            # Shareholder S&#39;holder
+            # Social Soc.
+            # Society Soc&#39;y
+            # South[ern] S.
+            # Southwest[ern] Sw.
+            # Steamship[s] S.S.
+            # Street St.
+            # Subcommittee Subcomm.
+            # Surety Sur.
+            # System[s] Sys.
+            # T
+            # Technology Tech.
+            # Telecommunication Telecomm.
+            # Tele[phone, graph] Tel.
+            # Temporary Temp.
+            # Township Twp.
+            # Transcontinental Transcon.
+            # Transport[ation] Transp.
+            # Trustee Tr.
+            # Turnpike Tpk.
+            # U
+            # Uniform Unif.
+            # University Univ.
+            # Utility Util.
+            # United States U.S.
+            # V
+            # Village Vill.
+            # W
+            # West[ern] W.
 
-            just return the title as an answer nothing else
-            """
+            # just return the title as an answer nothing else
+            # """
             
-            title_response = openai.ChatCompletion.create(
-            model = "gpt-4-turbo-preview",
-            temperature = 0.2,
-            max_tokens = 600,
-            messages = [
-                {"role": "system", "content": prompt_title},
-                {"role": "user", "content": user_input}
-                ]
-            )
-            print (title_response.choices[0].message.content)
+            # title_response = openai.ChatCompletion.create(
+            # model = "gpt-4-turbo-preview",
+            # temperature = 0.2,
+            # max_tokens = 600,
+            # messages = [
+            #     {"role": "system", "content": prompt_title},
+            #     {"role": "user", "content": user_input}
+            #     ]
+            # )
+            # print (title_response.choices[0].message.content)
+        
+            #title_case = (f"*{title_response.choices[0].message.content}*")
+            title_case = (f"*{title(user_input)}*")
             
-            title_case = (f"*{title_response.choices[0].message.content}*")
             
             summary = title_case + ", "  + summary 
             
