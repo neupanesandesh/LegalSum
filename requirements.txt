@@ -1,3 +1,2 @@
 openai==0.28
 nameparser==1.0.6
-streamlit==1.27.2
