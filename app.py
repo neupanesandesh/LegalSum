@@ -27,7 +27,7 @@ def text_summarizer(value):
 
     # Call the OpenAI API to generate a summary
     response = openai.ChatCompletion.create(
-        model="gpt-4-turbo-preview",
+        model="gpt-4-turbo",
         temperature=0.0,
         max_tokens=600,
         messages=[
@@ -71,7 +71,7 @@ def text_summarizer_alternate(value):
 
     # Call the OpenAI API to generate a summary
     response = openai.ChatCompletion.create(
-        model="gpt-4-turbo-preview",
+        model="gpt-4-turbo",
         temperature=0.0,
         max_tokens=600,
         messages=[
@@ -96,7 +96,7 @@ def title(value):
             """
             
     title_response = openai.ChatCompletion.create(
-    model = "gpt-4-turbo-preview",
+    model = "gpt-4-turbo",
     temperature = 0.2,
     max_tokens = 600,
     messages = [
@@ -300,7 +300,7 @@ def title(value):
     """
     
     abreviated_response = openai.ChatCompletion.create(
-    model = "gpt-4-turbo-preview",
+    model = "gpt-4-turbo",
     temperature = 0.2,
     max_tokens = 600,
     messages = [
@@ -513,7 +513,7 @@ def Connecticut_summarizer(value):
             """
             
     # name_response = openai.ChatCompletion.create(
-    # model = "gpt-4-turbo-preview",
+    # model = "gpt-4-turbo",
     # temperature = 0.2,
     # max_tokens = 600,
     # messages = [
@@ -545,7 +545,7 @@ def Connecticut_summarizer(value):
             Administrative Agencies
             """)
     court_response = openai.ChatCompletion.create(
-    model = "gpt-4-turbo-preview",
+    model = "gpt-4-turbo",
     temperature = 0.2,
     max_tokens = 600,
     messages = [
@@ -567,7 +567,7 @@ def Connecticut_summarizer(value):
             """
             
     num_response = openai.ChatCompletion.create(
-    model = "gpt-4-turbo-preview",
+    model = "gpt-4-turbo",
     temperature = 0.2,
     max_tokens = 600,
     messages = [
@@ -582,7 +582,7 @@ def Connecticut_summarizer(value):
     prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam. If it 's a federal case and district case, replace the first name by : U.S.D.J. Else if it 's a federal case and magistrate case, replace the first name by : U.S.M.J."
 
     judge_response = openai.ChatCompletion.create(
-    model = "gpt-4-turbo-preview",
+    model = "gpt-4-turbo",
     temperature = 0.2,
     max_tokens = 600,
     messages = [
@@ -610,7 +610,7 @@ def Connecticut_summarizer(value):
     
     print (judge_response.choices[0].message.content)
     date_response = openai.ChatCompletion.create(
-                model="gpt-4-turbo-preview",
+                model="gpt-4-turbo",
                 temperature=0.2,
                 max_tokens=16,
                 messages=[
@@ -689,7 +689,7 @@ def Connecticut_summarizer(value):
             Criminal Appeals
             """
     taxonomy_response = openai.ChatCompletion.create(
-    model = "gpt-4-turbo-preview",
+    model = "gpt-4-turbo",
     temperature = 0.2,
     max_tokens = 600,
     messages = [
@@ -746,7 +746,7 @@ def Connecticut_summarizer(value):
             """
                  
     practice_response = openai.ChatCompletion.create(
-    model = "gpt-4-turbo-preview",
+    model = "gpt-4-turbo",
     temperature = 0.2,
     max_tokens = 600,
     messages = [
@@ -760,7 +760,7 @@ def Connecticut_summarizer(value):
     prompt_title = "you are a US lawyer, and will read a legal decision and return the title of the case, only the title, nothing else, the title should describe in a sentence the case without mentioning the plaintiff and the defendants."
 
     title_response = openai.ChatCompletion.create(
-    model = "gpt-4-turbo-preview",
+    model = "gpt-4-turbo",
     temperature = 0.2,
     max_tokens = 600,
     messages = [
@@ -867,7 +867,7 @@ def Texas_summarizer(value):
             Criminal Appeals
             """
     taxonomy_response = openai.ChatCompletion.create(
-    model = "gpt-4-turbo-preview",
+    model = "gpt-4-turbo",
     temperature = 0.2,
     max_tokens = 600,
     messages = [
@@ -893,7 +893,7 @@ def Texas_summarizer(value):
             [District number] Court of Appeals                
             """)
     court_response = openai.ChatCompletion.create(
-    model = "gpt-4-turbo-preview",
+    model = "gpt-4-turbo",
     temperature = 0.2,
     max_tokens = 600,
     messages = [
@@ -907,7 +907,7 @@ def Texas_summarizer(value):
     case_number = ('I will send you a legal decision and you will detect the case number and return it, just the case number nothing else ')
             
     case_number_response = openai.ChatCompletion.create(
-    model = "gpt-4-turbo-preview",
+    model = "gpt-4-turbo",
     temperature = 0.2,
     max_tokens = 600,
     messages = [
@@ -922,7 +922,7 @@ def Texas_summarizer(value):
     
     # Extract the court date
     date_response = openai.ChatCompletion.create(
-        model="gpt-4-turbo-preview",
+        model="gpt-4-turbo",
         temperature=0.2,
         max_tokens=16,
         messages=[
@@ -1005,7 +1005,7 @@ def main():
 
             # # Call the OpenAI API to generate a summary
             # response = openai.ChatCompletion.create(
-            #     model="gpt-4-turbo-preview",
+            #     model="gpt-4-turbo",
             #     temperature=0.0,
             #     max_tokens=600,
             #     messages=[
@@ -1026,7 +1026,7 @@ def main():
 
             # Type of case federal or State
             federal_response = openai.ChatCompletion.create(
-                model="gpt-4-turbo-preview",
+                model="gpt-4-turbo",
                 temperature=0.2,
                 max_tokens=16,
                 messages=[
@@ -1049,7 +1049,7 @@ def main():
 
             # Extract the court date
             date_response = openai.ChatCompletion.create(
-                model="gpt-4-turbo-preview",
+                model="gpt-4-turbo",
                 temperature=0.2,
                 max_tokens=16,
                 messages=[
@@ -1070,7 +1070,7 @@ def main():
             prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam. If it 's a federal case and district case, replace the first name by : U.S.D.J. Else if it 's a federal case and magistrate case, replace the first name by : U.S.M.J."
 
             judge_response = openai.ChatCompletion.create(
-            model = "gpt-4-turbo-preview",
+            model = "gpt-4-turbo",
             temperature = 0.2,
             max_tokens = 600,
             messages = [
@@ -1124,7 +1124,7 @@ def main():
                 '3d Cir. (Third Circuit) - 8 ')
             
             court_response = openai.ChatCompletion.create(
-            model = "gpt-4-turbo-preview",
+            model = "gpt-4-turbo",
             temperature = 0.2,
             max_tokens = 600,
             messages = [
@@ -1332,7 +1332,7 @@ def main():
             # """
             
             # title_response = openai.ChatCompletion.create(
-            # model = "gpt-4-turbo-preview",
+            # model = "gpt-4-turbo",
             # temperature = 0.2,
             # max_tokens = 600,
             # messages = [
@@ -1403,7 +1403,7 @@ def main():
                 """
 
             taxonomy_response = openai.ChatCompletion.create(
-            model = "gpt-4-turbo-preview",
+            model = "gpt-4-turbo",
             temperature = 0.2,
             max_tokens = 600,
             messages = [
