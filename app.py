@@ -90,7 +90,8 @@ def title(value):
             Give the title of the legal case, no need to pull in all of the defendants, just the first one , and if it is a person just his last name. 
             If it is a State of the USA, just mention the State name.
             
-            Use the following abreviation table if it occurs
+            Use the following abreviation table to abreviate any word of the title :
+            
             A
             Academy Acad.
             Administrat[ive,ion] Admin.
@@ -103,7 +104,6 @@ def title(value):
             Authority Auth.
             Automo[bile, tive] Auto.
             Avenue Ave.
-            Attorney Atty.
             B
             Board Bd.
             Broadcast[ing] Broad.
@@ -276,7 +276,6 @@ def title(value):
             Uniform Unif.
             University Univ.
             Utility Util.
-            United States U.S.
             V
             Village Vill.
             W
@@ -305,7 +304,7 @@ def Connecticut_summarizer(value):
             Give the name of the legal case, no need to pull in all of the defendants, just the first one , and if it is a person just his last name. 
             If it is a State of the USA, just mention the State name.
             
-            Use the following abreviation table if it occurs
+            Use the following abreviation table to abreviate any word of the title :
             A
             Academy Acad.
             Administrat[ive,ion] Admin.
