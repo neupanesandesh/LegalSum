@@ -90,7 +90,7 @@ def title(value):
             Give the title of the legal case, no need to pull in all of the defendants, just the first one , and if it is a person just his last name. 
             If it is a State of the USA, just mention the State name.
             extract the case name from a legal text similar to the following format:
-            [PLAINTIFF NAME] v. [DEFENDANT NAMES]
+            [Plaintiff Name] v. [Defendent Name]
 
             just return the title as an answer nothing else
             """
@@ -507,7 +507,7 @@ def Connecticut_summarizer(value):
             West[ern]	W.
             
             extract the case name from a legal text similar to the following format:
-            [PLAINTIFF NAME] v. [DEFENDANT NAMES]
+            [Plaintiff Name] v. [Defendent Name]
 
             just return the name as an answer nothing else
             """
