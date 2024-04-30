@@ -1,6 +1,7 @@
 import streamlit as st
 from nameparser import HumanName
 import openai
+import re
 
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -12,6 +13,12 @@ def remove_suffix(s):
     elif s.endswith("CR"):
         return s[:-3]  # Remove last 2 characters
     return s
+
+def titlecase(s):
+    return re.sub(r"[A-Za-z]+('[A-Za-z]+)?",
+     lambda mo: mo.group(0)[0].upper() +
+     mo.group(0)[1:].lower(),
+     s)
 
 def text_summarizer(value):
      # Define the context for the summary
@@ -312,7 +319,7 @@ def title(value):
     
     title_case = abreviated_response.choices[0].message.content
     
-    return title_case
+    return titlecase(title_case)
 
 def Connecticut_summarizer(value):
     summary =""
