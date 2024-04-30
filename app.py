@@ -97,7 +97,9 @@ def title(value):
             Give the title of the legal case, no need to pull in all of the defendants, just the first one , and if it is a person just his last name. 
             If it is a State of the USA, just mention the State name.
             extract the case name from a legal text similar to the following format:
+            
             [Plaintiff Name] v. [Defendent Name]
+            Use Capital letter for the first letter of each word when it makes sense.
 
             just return the title as an answer nothing else
             """
@@ -319,7 +321,8 @@ def title(value):
     
     title_case = abreviated_response.choices[0].message.content
     
-    return titlecase(title_case)
+    return title_case
+    #return titlecase(title_case)
 
 def Connecticut_summarizer(value):
     summary =""
