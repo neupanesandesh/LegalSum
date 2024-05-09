@@ -2,6 +2,9 @@ import streamlit as st
 from nameparser import HumanName
 import openai
 import re
+import yaml
+from yaml.loader import SafeLoader
+import streamlit_authenticator as stauth
 
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
 openai.api_key = st.secrets["OPENAI_API_KEY"]
