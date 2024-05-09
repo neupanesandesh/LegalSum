@@ -1,0 +1,39 @@
+cookie:
+  expiry_days: 30
+  key: random_signature_key
+  name: random_cookie_name
+credentials:
+  usernames:
+    amor:
+      email: Amor.chouchane@gmail.com
+      failed_login_attempts: 0
+      logged_in: true
+      name: Amor
+      password: $2b$12$wmbbG9q9Z3j5Olm0FV4Zh.YRWzd9iU/u6fq8/8/IRIgiL1D8m9WTy
+    james:
+      email: johnson.jamesm1987@gmail.com
+      failed_login_attempts: 0
+      logged_in: true
+      name: James
+      password: $2b$12$b6ot2nleAS5JfxTAcEontO668rxz4yAM5ThMZxRBJbq1wRW9v9DLO
+    michael:
+      email: michaelh@mesjassociates.com
+      failed_login_attempts: 0
+      logged_in: true
+      name: Michael
+      password: $2b$12$eZX4yfn1L/PHzvr2hYWpm.1MlEGfxve2P3q/o8kduUEHMe57vGYUK
+    mike:
+      email: mjd@mjderienzo.com
+      failed_login_attempts: 0
+      logged_in: true
+      name: Mike
+      password: $2b$12$LHbunYxnFl9DaCZd2gn6r..E2z2Z2Q.74wtHA0OwSU0vYcqgnJvhC
+    shailendra:
+      email: shailendra@mesjassociates.com
+      failed_login_attempts: 0
+      logged_in: true
+      name: Shailendra
+      password: $2b$12$6bnPdF5FdtT5ff/mXV05vOEecMVyDj6dzNAAa9X9A5XF2kVR0eM5K
+pre-authorized:
+  emails:
+  - amor.chouchane@gmail.com

@@ -1,0 +1,16 @@
+usernames:
+  amor:
+    role: admin
+  james:
+    role: user
+    states:
+    - New Jersey
+  michael:
+    role: admin
+  mike:
+    role: user
+    states:
+    - Connecticut
+    - Texas
+  shailendra:
+    role: admin
