@@ -1,2 +1,4 @@
 openai==0.28
 nameparser==1.0.6
+PyYAML==6.0.1
+streamlit_authenticator==0.3.2
