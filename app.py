@@ -100,7 +100,8 @@ def title(value):
             extract the case name from a legal text similar to the following format:
             
             [Plaintiff Name] v. [Defendent Name]
-            Use Capital letter for the first letter of each word when it makes sense.
+            Use Capital letter for the first letter of each word when it makes sense, not needed for capitalization preposition words like "of" or standing letter like v.
+            
 
             just return the title as an answer nothing else
             """
@@ -300,6 +301,7 @@ def title(value):
             Uniform	Unif.
             University	Univ.
             Utility	Util.
+            United States U.S.
             V	
             Village	Vill.
             W	
