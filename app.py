@@ -302,6 +302,7 @@ def title(value):
             University	Univ.
             Utility	Util.
             United States U.S.
+            United States of America U.S.
             V	
             Village	Vill.
             W	
