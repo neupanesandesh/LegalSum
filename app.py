@@ -748,7 +748,7 @@ def is_positive_integer(value):
 # Define the Streamlit app
 def main():
     global page_count
-    #st.image('MESJ.jpg')
+    st.image('MESJ.jpg')
     st.title("Legal Decision Summarizer")
     with open('config.YAML') as file:
         config = yaml.load(file, Loader=SafeLoader)
