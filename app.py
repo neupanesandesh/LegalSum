@@ -96,7 +96,10 @@ def text_summarizer_alternate(value):
         ]
     )
     
-    return response.choices[0].message.content.strip()
+    summary_response = response.choices[0].message.content.strip()
+    summary_response = ' '.join(summary_response.splitlines())
+
+    return summary_response 
 
 def title(value):
 
@@ -424,7 +427,7 @@ def Connecticut_summarizer(value):
                 max_tokens=16,
                 messages=[
                     {"role": "system", "content": "When did the judgment happen, if you can't find, look for decided date, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
-                    {"role": "user", "content": first_two_pages}
+                    {"role": "user", "content": value}
                 ]
             )
 
@@ -736,7 +739,7 @@ def Texas_summarizer(value):
         max_tokens=16,
         messages=[
             {"role": "system", "content": "When did the judgment happen, if you can't find, look for decided date, also answer with the date only, nothing else, no additional text, just the date, with this format 01/17/2021"},
-            {"role": "user", "content": first_two_pages}
+            {"role": "user", "content": value}
         ]
     )
 
@@ -958,8 +961,8 @@ def main():
                         temperature=0.2,
                         max_tokens=16,
                         messages=[
-                            {"role": "system", "content": "When did the judgment happen, if you can't find, look for decided date, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
-                            {"role": "user", "content": first_two_pages}
+                            {"role": "system", "content": "When did the judgment happen, if you can't find, look for decided date or the filed date, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
+                            {"role": "user", "content": user_input}
                         ]
                     )
 
@@ -967,7 +970,7 @@ def main():
                     court_date = date_response.choices[0].message.content.strip()
                     
                     if court_type =="Federal":
-                        summary = summary + " [Filled " + court_date + "]"
+                        summary = summary + " [Filed " + court_date + "]"
                     else:
                         summary = summary + " [" + court_date + "]"    
                     
