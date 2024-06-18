@@ -321,6 +321,7 @@ def title(value):
             
             ------------------
             Just return the title with the abriviated words (if applicable), nothing else.
+            Also, don't use any other abbreviation that is not on the prevous list.
     """
     
     abreviated_response = openai.ChatCompletion.create(
