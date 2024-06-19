@@ -131,7 +131,7 @@ def title(value):
     title_case = title_response.choices[0].message.content
     
     prompt_abreviation = """
-            if needed, use the following abreviation table to abreviate any word of the title :
+            if needed, use the following abbreviation table to abbreviate any word of the title :
             A
             Academy	Acad.
             Administrat[ive,ion]	Admin.
@@ -320,8 +320,8 @@ def title(value):
             West[ern]	W.
             
             ------------------
-            Just return the title with the abriviated words (if applicable), nothing else.
-            Also, don't use any other abbreviation that is not on the prevous list.
+            Very important, don't use any other abbreviation that is not on the previous list.
+            Just return the title with the abbriviated words (if applicable), nothing else.
     """
     
     abreviated_response = openai.ChatCompletion.create(
