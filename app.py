@@ -962,7 +962,7 @@ def main():
                         temperature=0.2,
                         max_tokens=16,
                         messages=[
-                            {"role": "system", "content": "Check for the filed date, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
+                            {"role": "system", "content": "Check filed date, usually it is at the top of the document, American date format, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
                             {"role": "user", "content": user_input}
                         ]
                     )
