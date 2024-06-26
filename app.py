@@ -971,9 +971,7 @@ def main():
                     court_date = date_response.choices[0].message.content.strip()
                     
                     if court_type =="Federal":
-                        summary = summary + " [Filed " + court_date + "]"
-                    else:
-                        summary = summary + " [" + court_date + "]"    
+                        summary = summary + " [Filed " + court_date + "]"    
                     
                     # judge
                     prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam. If it 's a federal case and district case, replace the first name by : U.S.D.J. Else if it 's a federal case and magistrate case, replace the first name by : U.S.M.J."
