@@ -16,6 +16,12 @@ credentials:
       logged_in: true
       name: James
       password: $2b$12$b6ot2nleAS5JfxTAcEontO668rxz4yAM5ThMZxRBJbq1wRW9v9DLO
+    laura:
+      email: lauralbrown130@gmail.com
+      failed_login_attempts: 0
+      logged_in: true
+      name: Laura
+      password: $2b$12$Nt0veSZQCingb99W4wxUoOT7fjdzFQERoQ8GcDrR3ZzsfrqgQedqK
     michael:
       email: michaelh@mesjassociates.com
       failed_login_attempts: 0
