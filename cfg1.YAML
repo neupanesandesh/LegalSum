@@ -14,3 +14,5 @@ usernames:
     - Texas
   shailendra:
     role: admin
+  laura:
+    role: admin
