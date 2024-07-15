@@ -32,22 +32,22 @@ def setOptions (role ):
 
 def text_summarizer_alternate(value):
      # Define the context for the summary
-    context = ('you are a US lawyer that makes summaries according a specific structure. Here are the instructions :'
-    'the summary can be characterised as a case digest or a case brief. It is a concise restatement of the essential elements of the court''s decision, including:'
-    '1. The procedural context (2 - 4 sentences)'
-    '2. The factual background (2 - 4  sentences)'
-    '3. The legal arguments presented (2 - 4 sentences )'
-    '4. The trial court''s findings  (2 - 4 sentences)'
-    '5. The  court''s decision (2 - 4 sentences)' 
-    'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case.' 
-    'The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed.'
-    'Also don''t use formulas like : in this case, judgment or things like "In the case before the United States district court for the District of New Jersey" because we already have that information ahead'
-    'Do not need to repeat the name of the case.'
-    'Answer in a professional way, don''t invent, stick to the facts.'
-    'if you copy text from the orginal case put into quotes " " .'
-    'if there are number don''t put them into text, keep them like 98 or 98%'
-    'if defendant and plaintiff do not start a sentence then they should not be capitalized, even if they are capitlized in the legal decison, don''t capitlize unless it starts a sentence.'
-    'Keep it between 195-325 tokens.')
+    context = """you are a US lawyer that makes summaries according a specific structure. Here are the instructions :
+    the summary can be characterised as a case digest or a case brief. It is a concise restatement of the essential elements of the court''s decision, including:
+    1. The procedural context (2 - 4 sentences)
+    2. The factual background (2 - 4  sentences)
+    3. The legal arguments presented (2 - 4 sentences )
+    4. The trial court''s findings  (2 - 4 sentences)
+    5. The  court''s decision (2 - 4 sentences)
+    The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case.
+    The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed.
+    Also don''t use formulas like : in this case, judgment or things like "In the case before the United States district court for the District of New Jersey" because we already have that information ahead
+    Do not need to repeat the name of the case.
+    Answer in a professional way, don''t invent, stick to the facts.
+    if you copy text from the orginal case put into quotes " " .
+    if there are number don''t put them into letters, keep them in numbers like 98 or if percentage : 98%.
+    if defendant and plaintiff do not start a sentence then they should not be capitalized, even if they are capitlized in the legal decison, don''t capitlize unless it starts a sentence.
+    Keep it between 195-325 tokens."""
     
     context = context + """
     In your summary, please ensure the following key aspects are addressed:
