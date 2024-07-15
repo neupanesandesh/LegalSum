@@ -29,30 +29,6 @@ def setOptions (role ):
         return ["Reset Password", "Add User", "Update"]
     elif role == "user":
         return ["Reset Password"]
-def text_summarizer(value):
-     # Define the context for the summary
-    context = ('you are a US lawyer that makes summaries according a specific structure. Here are the instructions :'
-    'the summary can be characterised as a case digest or a case brief. It is a concise restatement of the essential elements of the court''s decision, including:'
-    '1. The procedural context (2 - 4 sentences)'
-    '2. The factual background (2 - 4  sentences)'
-    '3. The legal arguments presented (2 - 4 sentences )'
-    '4. The trial court''s findings  (2 - 4 sentences)'
-    '5. The  court''s decision (2 - 4 sentences)' 
-    'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case. The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed. Also don''t use formulas like : in this case, judgment. Do not need to repeat the name of the case. Don''t need to write out the whole name of the court, however if you have to use it replace it by : the court'
-    'Answer in a professional way, don''t invent, stick to the facts.')
-
-    # Call the OpenAI API to generate a summary
-    response = openai.ChatCompletion.create(
-        model=GPTModel,
-        temperature=0.0,
-        max_tokens=600,
-        messages=[
-            {"role": "system", "content": context},
-            {"role": "user", "content": value}
-        ]
-    )
-    
-    return response.choices[0].message.content.strip()
 
 def text_summarizer_alternate(value):
      # Define the context for the summary
@@ -65,9 +41,12 @@ def text_summarizer_alternate(value):
     '5. The  court''s decision (2 - 4 sentences)' 
     'The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case.' 
     'The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed.'
-    'Also don''t use formulas like : in this case, judgment. Do not need to repeat the name of the case.'
+    'Also don''t use formulas like : in this case, judgment or things like "In the case before the United States district court for the District of New Jersey" because we already have that information ahead'
+    'Do not need to repeat the name of the case.'
     'Answer in a professional way, don''t invent, stick to the facts.'
     'if you copy text from the orginal case put into quotes " " .'
+    'if there are number don''t put them into text, keep them like 98 or 98%'
+    'if defendant and plaintiff do not start a sentence then they should not be capitalized, even if they are capitlized in the legal decison, don''t capitlize unless it starts a sentence.'
     'Keep it between 195-325 tokens.')
     
     context = context + """
@@ -99,6 +78,8 @@ def text_summarizer_alternate(value):
     summary_response = response.choices[0].message.content.strip()
     summary_response = ' '.join(summary_response.splitlines())
 
+    summary_response = summary_response.replace("$", "&#36;") # avoiding issues with $
+
     return summary_response 
 
 def title(value):
@@ -106,7 +87,9 @@ def title(value):
     title_case=""
     
     prompt_title = """
-            Give the title of the legal case, no need to pull in all of the defendants, just the first one , and if it is a person just his last name. 
+            Give the title of the legal case, take the current title first, then here are the rules : 
+            If there are several defendents, just take the first one, and if it is a person just his last name. 
+            If it is a company, it needs to keep the whole name, don't abbreviate anything.
             If it is a State of the USA, just mention the State name.
             extract the case name from a legal text similar to the following format:
             
@@ -611,7 +594,6 @@ def Texas_summarizer(value):
     first_two_pages = extract_first_two_pages(value)
     print(summary)
     
-    summary = summary.replace("$", "&#36;") # avoiding issues
     summary = summary.replace("District Court", "district court")
     
     prompt_taxonomy = """ I will give you a table with taxonomy , read the legal case, You can use up to three taxonomies. The last topic is usually Civil Appeals or Criminal Appeals. The format is caps and lower case. Just return up to 3 taxonomies, separated by "│", example :  Wrongful Death│Civil Rights│Civil Appeals. Here is the table of taxonomy :
@@ -929,7 +911,6 @@ def main():
                     
                     print(summary)
                     
-                    summary = summary.replace("$", "&#36;") # avoiding issues
                     summary = summary.replace("District Court", "district court")
                     st.subheader("Summary:")
 
@@ -971,18 +952,18 @@ def main():
                     court_date = date_response.choices[0].message.content.strip()
                     
                     if court_type =="Federal":
-                        summary = summary + " [Filed " + court_date + "]"    
+                        summary = summary + " [Filed " + court_date + "]"
                     
                     # judge
                     prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam. If it 's a federal case and district case, replace the first name by : U.S.D.J. Else if it 's a federal case and magistrate case, replace the first name by : U.S.M.J."
 
                     judge_response = openai.ChatCompletion.create(
                     model = GPTModel,
-                    temperature = 0.2,
+                    temperature = 0.0,
                     max_tokens = 600,
                     messages = [
                         {"role": "system", "content": prompt_judge},
-                        {"role": "user", "content": first_two_pages}
+                        {"role": "user", "content": user_input}
                         ]
                     )
                     
@@ -1048,7 +1029,7 @@ def main():
                     summary = title_case + ", "  + summary 
                     
                     # taxonomy
-                    prompt_taxonomy = """ I will give you a table with taxonomy , just return the corresponding number , nothing else. here is the table :
+                    prompt_taxonomy = """ I will give you a table with taxonomy , read the legal case, just return the corresponding number , nothing else. here is the table :
                         NJ topic #	NJ Taxonomy Topics
                         01	Administrative Law
                         54	Admiralty
