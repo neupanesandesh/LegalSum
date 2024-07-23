@@ -10,6 +10,8 @@ import streamlit_authenticator as stauth
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 page_count= None
+
+GPTModelLight = "gpt-4o-mini"
 GPTModel = "gpt-4o"
 
 def extract_first_two_pages(text):
@@ -88,16 +90,17 @@ def title(value):
     
     prompt_title = """
             Give the title of the legal case, take the current title first, then here are the rules : 
-            If there are several defendents, just take the first one, and if it is a person just his last name. 
-            If it is a company, it needs to keep the whole name, don't abbreviate anything.
+            If there are several defendents, just take the first one.
+            If it is a person just keep his last name and don't put his first name. 
+            If it is a company or organization, it needs to keep the whole name, don't abbreviate anything.
             If it is a State of the USA, just mention the State name.
             extract the case name from a legal text similar to the following format:
             
-            [Plaintiff Name] v. [Defendent Name]
+            [Plaintiff Name] v. [Defendant Name]
             Use Capital letter for the first letter of each word when it makes sense, not needed for capitalization preposition words like "of" or standing letter like v.
             
 
-            just return the title as an answer nothing else
+            just return the title as an answer nothing else.
             """
             
     title_response = openai.ChatCompletion.create(
@@ -113,8 +116,14 @@ def title(value):
     
     title_case = title_response.choices[0].message.content
     
+    
+    #if needed, use the following abbreviation table to abbreviate any word of the title, only use 
+    #        abbreviation from this table, don't abbreviate any word that is not in the table :
     prompt_abreviation = """
-            if needed, use the following abbreviation table to abbreviate any word of the title :
+            Given the title, abbreviate any words according to the provided table. 
+            VEry important : Only use abbreviations from the table and do not abbreviate words that do not match exactly.
+            Don't take liberties. 
+            Return the title with the abbreviated words if applicable, nothing else.
             A
             Academy	Acad.
             Administrat[ive,ion]	Admin.
@@ -302,14 +311,14 @@ def title(value):
             W	
             West[ern]	W.
             
-            ------------------
-            Very important, don't use any other abbreviation that is not on the previous list.
-            Just return the title with the abbriviated words (if applicable), nothing else.
+
     """
-    
+#            Very important, don't use any other abbreviation that is not on the previous list.
+#            Just return the title with the abbriviated words (if applicable), nothing else.   
+
     abreviated_response = openai.ChatCompletion.create(
     model = GPTModel,
-    temperature = 0.2,
+    temperature = 0.0,
     max_tokens = 600,
     messages = [
         {"role": "system", "content": prompt_abreviation},
