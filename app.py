@@ -317,8 +317,8 @@ def title(value):
 #            Just return the title with the abbriviated words (if applicable), nothing else.   
 
     abreviated_response = openai.ChatCompletion.create(
-    model = GPTModel,
-    temperature = 0.0,
+    model = GPTModelLight,
+    temperature = 0.2,
     max_tokens = 600,
     messages = [
         {"role": "system", "content": prompt_abreviation},
