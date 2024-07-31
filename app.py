@@ -7,7 +7,7 @@ from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
 
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
-os.environ["OPENAI_API_KEY"]= = st.secrets["API_KEY"]
+os.environ["OPENAI_API_KEY"]= st.secrets["API_KEY"]
 
 page_count= None
 
