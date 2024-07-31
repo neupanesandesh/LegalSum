@@ -1,6 +1,6 @@
 import streamlit as st
 from nameparser import HumanName
-import openai
+from openai import OpenAI
 import re
 import yaml
 from yaml.loader import SafeLoader
