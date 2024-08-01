@@ -5,6 +5,11 @@ import re
 import yaml
 from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
+import nltk
+from nltk.tokenize import word_tokenize
+
+# Download necessary NLTK data
+nltk.download('punkt')
 
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
 client = OpenAI(
@@ -15,6 +20,223 @@ page_count= None
 
 GPTModelLight = "gpt-4o-mini"
 GPTModel = "gpt-4o"
+
+# Complete abbreviation dictionary
+abbrev_dict = {
+    "Academy": "Acad.",
+    "Administration": "Admin.",
+    "Administrative": "Admin.",
+    "Administrator": "Adm'r",
+    "Administratrix": "Adm'x",
+    "America": "Am.",
+    "American": "Am.",
+    "and": "&",
+    "Associate": "Assoc.",
+    "Association": "Ass'n",
+    "Atlantic": "Atl.",
+    "Authority": "Auth.",
+    "Automobile": "Auto.",
+    "Automotive": "Auto.",
+    "Avenue": "Ave.",
+    "Board": "Bd.",
+    "Broadcasting": "Broad.",
+    "Brotherhood": "Bhd.",
+    "Brothers": "Bros.",
+    "Building": "Bldg.",
+    "Business": "Bus.",
+    "Casualty": "Cas.",
+    "Center": "Ctr.",
+    "Centre": "Ctr.",
+    "Central": "Cent.",
+    "Chemical": "Chem.",
+    "Coalition": "Coal.",
+    "College": "Coll.",
+    "Commission": "Comm'n",
+    "Commissioner": "Comm'r",
+    "Committee": "Comm.",
+    "Communication": "Commc'n",
+    "Community": "Cmty.",
+    "Company": "Co.",
+    "Compensation": "Comp.",
+    "Condominium": "Condo.",
+    "Congress": "Cong.",
+    "Congressional": "Cong.",
+    "Consolidated": "Consol.",
+    "Construction": "Constr.",
+    "Continental": "Cont'l",
+    "Cooperative": "Coop.",
+    "Corporation": "Corp.",
+    "Correction": "Corr.",
+    "Corrections": "Corr.",
+    "Correctional": "Corr.",
+    "Defense": "Def.",
+    "Department": "Dep't",
+    "Detention": "Det.",
+    "Development": "Dev.",
+    "Director": "Dir.",
+    "Distributor": "Distrib.",
+    "Distributing": "Distrib.",
+    "District": "Dist.",
+    "Division": "Div.",
+    "East": "E.",
+    "Eastern": "E.",
+    "Economic": "Econ.",
+    "Economics": "Econ.",
+    "Economical": "Econ.",
+    "Economy": "Econ.",
+    "Education": "Educ.",
+    "Educational": "Educ.",
+    "Electric": "Elec.",
+    "Electrical": "Elec.",
+    "Electricity": "Elec.",
+    "Electronic": "Elec.",
+    "Engineer": "Eng'r",
+    "Engineering": "Eng'g",
+    "Enterprise": "Enter.",
+    "Entertainment": "Ent.",
+    "Environment": "Env't",
+    "Environmental": "Envtl.",
+    "Equality": "Equal.",
+    "Equipment": "Equip.",
+    "Examiner": "Exam'r",
+    "Exchange": "Exch.",
+    "Executor": "Ex'r",
+    "Executrix": "Ex'x",
+    "Export": "Exp.",
+    "Exporter": "Exp.",
+    "Exportation": "Exp.",
+    "Federal": "Fed.",
+    "Federation": "Fed'n",
+    "Fidelity": "Fid.",
+    "Finance": "Fin.",
+    "Financial": "Fin.",
+    "Financing": "Fin.",
+    "Foundation": "Found.",
+    "General": "Gen.",
+    "Government": "Gov't",
+    "Guaranty": "Guar.",
+    "Hospital": "Hosp.",
+    "Housing": "Hous.",
+    "Import": "Imp.",
+    "Importer": "Imp.",
+    "Importation": "Imp.",
+    "Incorporated": "Inc.",
+    "Indemnity": "Indem.",
+    "Independent": "Indep.",
+    "Industry": "Indus.",
+    "Industries": "Indus.",
+    "Industrial": "Indus.",
+    "Information": "Info.",
+    "Institute": "Inst.",
+    "Institution": "Inst.",
+    "Insurance": "Ins.",
+    "International": "Int'l",
+    "Investment": "Inv.",
+    "Laboratory": "Lab.",
+    "Liability": "Liab.",
+    "Limited": "Ltd.",
+    "Litigation": "Litig.",
+    "Machine": "Mach.",
+    "Machinery": "Mach.",
+    "Maintenance": "Maint.",
+    "Management": "Mgmt.",
+    "Manufacturer": "Mfr.",
+    "Manufacturing": "Mfg.",
+    "Maritime": "Mar.",
+    "Market": "Mkt.",
+    "Marketing": "Mktg.",
+    "Mechanical": "Mech.",
+    "Medical": "Med.",
+    "Medicine": "Med.",
+    "Memorial": "Mem'l",
+    "Merchant": "Merch.",
+    "Merchandise": "Merch.",
+    "Merchandising": "Merch.",
+    "Metropolitan": "Metro.",
+    "Municipal": "Mun.",
+    "Mutual": "Mut.",
+    "National": "Nat'l",
+    "North": "N.",
+    "Northern": "N.",
+    "Northeast": "Ne.",
+    "Northeastern": "Ne.",
+    "Northwest": "Nw.",
+    "Northwestern": "Nw.",
+    "Number": "No.",
+    "Organization": "Org.",
+    "Organizing": "Org.",
+    "Pacific": "Pac.",
+    "Partnership": "P'ship",
+    "Personal": "Pers.",
+    "Personnel": "Pers.",
+    "Pharmaceutics": "Pharm.",
+    "Pharmaceutical": "Pharm.",
+    "Preserve": "Pres.",
+    "Preservation": "Pres.",
+    "Probation": "Prob.",
+    "Product": "Prod.",
+    "Production": "Prod.",
+    "Professional": "Prof'l",
+    "Property": "Prop.",
+    "Protection": "Prot.",
+    "Public": "Pub.",
+    "Publication": "Publ'n",
+    "Publishing": "Publ'g",
+    "Railroad": "R.R.",
+    "Railway": "Ry.",
+    "Refining": "Ref.",
+    "Regional": "Reg'l",
+    "Rehabilitation": "Rehab.",
+    "Reproduction": "Reprod.",
+    "Reproductive": "Reprod.",
+    "Resource": "Res.",
+    "Resources": "Res.",
+    "Restaurant": "Rest.",
+    "Retirement": "Ret.",
+    "Road": "Rd.",
+    "Savings": "Sav.",
+    "School": "Sch.",
+    "Schools": "Sch.",
+    "Science": "Sci.",
+    "Secretary": "Sec'y",
+    "Security": "Sec.",
+    "Securities": "Sec.",
+    "Service": "Serv.",
+    "Shareholder": "S'holder",
+    "Social": "Soc.",
+    "Society": "Soc'y",
+    "South": "S.",
+    "Southern": "S.",
+    "Southwest": "Sw.",
+    "Southwestern": "Sw.",
+    "Steamship": "S.S.",
+    "Steamships": "S.S.",
+    "Street": "St.",
+    "Subcommittee": "Subcomm.",
+    "Surety": "Sur.",
+    "System": "Sys.",
+    "Systems": "Sys.",
+    "Technology": "Tech.",
+    "Telecommunication": "Telecomm.",
+    "Telephone": "Tel.",
+    "Telegraph": "Tel.",
+    "Temporary": "Temp.",
+    "Township": "Twp.",
+    "Transcontinental": "Transcon.",
+    "Transport": "Transp.",
+    "Transportation": "Transp.",
+    "Trustee": "Tr.",
+    "Turnpike": "Tpk.",
+    "Uniform": "Unif.",
+    "University": "Univ.",
+    "Utility": "Util.",
+    "United States": "U.S.",
+    "United States of America": "U.S.",
+    "Village": "Vill.",
+    "West": "W.",
+    "Western": "W."
+}
+
 
 def extract_first_two_pages(text):
     lines = text.split('\n')
@@ -86,6 +308,18 @@ def text_summarizer_alternate(value):
 
     return summary_response 
 
+def abbreviate_title(title):
+    words = word_tokenize(title)
+    abbreviated_words = []
+    for word in words:
+        if word in abbrev_dict:
+            abbreviated_words.append(abbrev_dict[word])
+        elif word.capitalize() in abbrev_dict:
+            abbreviated_words.append(abbrev_dict[word.capitalize()])
+        else:
+            abbreviated_words.append(word)
+    return ' '.join(abbreviated_words)
+
 def title(value):
 
     title_case=""
@@ -98,16 +332,16 @@ def title(value):
             If it is a State of the USA, just mention the State name.
             extract the case name from a legal text similar to the following format:
             
-            [Plaintiff Name] v. [Defendant Name]
+            [Plaintiff Lastname] v. [Defendant Lastname]
             Use Capital letter for the first letter of each word when it makes sense, not needed for capitalization preposition words like "of" or standing letter like v.
             
 
             just return the title as an answer nothing else.
+    
             """
-            
     title_response = client.chat.completions.create(
     model = GPTModel,
-    temperature = 0.2,
+    temperature = 0.0,
     max_tokens = 600,
     messages = [
         {"role": "system", "content": prompt_title},
@@ -118,220 +352,254 @@ def title(value):
     
     title_case = title_response.choices[0].message.content
     
+    title_case = abbreviate_title(title_case)
     
-    #if needed, use the following abbreviation table to abbreviate any word of the title, only use 
-    #        abbreviation from this table, don't abbreviate any word that is not in the table :
-    prompt_abreviation = """
-            Given the title, abbreviate any words according to the provided table. 
-            VEry important : Only use abbreviations from the table and do not abbreviate words that do not match exactly.
-            Don't take liberties. 
-            Return the title with the abbreviated words if applicable, nothing else.
-            A
-            Academy	Acad.
-            Administrat[ive,ion]	Admin.
-            Administrat[or,rix]	Adm'[r,x]
-            America[n]	Am.
-            and	&
-            Associate	Assoc.
-            Association	Ass'n
-            Atlantic	Atl.
-            Authority	Auth.
-            Automo[bile, tive]	Auto.
-            Avenue	Ave.
-            B	
-            Board	Bd.
-            Broadcast[ing]	Broad.
-            Brotherhood	Bhd.
-            Brothers	Bros.
-            Building	Bldg.
-            Business	Bus.
-            C	
-            Casualty	Cas.
-            Cent[er, re]	Ctr.
-            Central	Cent.
-            Chemical	Chem.
-            Coalition	Coal.
-            College	Coll.
-            Commission	Comm'n
-            Commissioner	Comm'r
-            Committee	Comm.
-            Communication	Commc'n
-            Community	Cmty.
-            Company	Co.
-            Compensation	Comp.
-            Condominium	Condo.
-            Congress[ional]	Cong.
-            Consolidated	Consol.
-            Construction	Constr.
-            Continental	Cont'l
-            Cooperative	Coop.
-            Corporation	Corp.
-            Correction[s, al]	Corr.
-            D	
-            Defense	Def.
-            Department	Dep't
-            Detention	Det.
-            Development	Dev.
-            Director	Dir.
-            Distribut[or, ing]	Distrib.
-            District	Dist.
-            Division	Div.
-            E	
-            East[ern]	E.
-            Econom[ic, ics, ical, y]	Econ.
-            Education[al]	Educ.
-            Electric[al, ity]	Elec.
-            Electronic	Elec.
-            Engineer	Eng'r
-            Engineering	Eng'g
-            Enterprise	Enter.
-            Entertainment	Ent.
-            Environment	Env't
-            Environmental	Envtl.
-            Equality	Equal.
-            Equipment	Equip.
-            Examiner	Exam'r
-            Exchange	Exch.
-            Execut[or, rix]	Ex'[r, x]
-            Export[er, ation]	Exp.
-            F	
-            Federal	Fed.
-            Federation	Fed'n
-            Fidelity	Fid.
-            Finance[e, ial, ing]	Fin.
-            Foundation	Found.
-            G	
-            General	Gen.
-            Government	Gov't
-            Guaranty	Guar.
-            H	
-            Hospital	Hosp.
-            Housing	Hous.
-            I	
-            Import[er, ation]	Imp.
-            Incorporated	Inc.
-            Indemnity	Indem.
-            Independent	Indep.
-            Industr[y, ies, ial]	Indus.
-            Information	Info.
-            Institut[e, ion]	Inst.
-            Insurance	Ins.
-            International	Int'l
-            Investment	Inv.
-            J	
-            K	
-            L	
-            Laboratory	Lab.
-            Liability	Liab.
-            Limited	Ltd.
-            Litigation	Litig.
-            M	
-            Machine[ry]	Mach.
-            Maintenance	Maint.
-            Management	Mgmt.
-            Manufacturer	Mfr.
-            Manufacturing	Mfg.
-            Maritime	Mar.
-            Market	Mkt.
-            Marketing	Mktg.
-            Mechanic[al]	Mech.
-            Medic[al, ine]	Med.
-            Memorial	Mem'l
-            Merchan[t, dise, dising]	Merch.
-            Metropolitan	Metro.
-            Municipal	Mun.
-            Mutual	Mut.
-            N	
-            National	Nat'l
-            North[ern]	N.
-            Northeast[ern]	Ne.
-            Northwest[ern]	Nw.
-            Number	No.
-            O	
-            Organiz[ation, ing]	Org.
-            P	
-            Pacific	Pac.
-            Partnership	P'ship
-            Person[al, nel]	Pers.
-            Pharmaceutic[s, al]	Pharm.
-            Preserv[e, ation]	Pres.
-            Probation	Prob.
-            Product[ion]	Prod.
-            Professional	Prof'l
-            Property	Prop.
-            Protection	Prot.
-            Public	Pub.
-            Publication	Publ'n
-            Publishing	Publ'g
-            Q	
-            R	
-            Railroad	R.R.
-            Railway	Ry.
-            Refining	Ref.
-            Regional	Reg'l
-            Rehabilitation	Rehab.
-            Reproduct[ion, ive]	Reprod.
-            Resource[s]	Res.
-            Restaurant	Rest.
-            Retirement	Ret.
-            Road	Rd.
-            S	
-            Savings	Sav.
-            School[s]	Sch.
-            Science	Sci.
-            Secretary	Sec'y
-            Securit[y, ies]	Sec.
-            Service	Serv.
-            Shareholder	S'holder
-            Social	Soc.
-            Society	Soc'y
-            South[ern]	S.
-            Southwest[ern]	Sw.
-            Steamship[s]	S.S.
-            Street	St.
-            Subcommittee	Subcomm.
-            Surety	Sur.
-            System[s]	Sys.
-            T	
-            Technology	Tech.
-            Telecommunication	Telecomm.
-            Tele[phone, graph]	Tel.
-            Temporary	Temp.
-            Township	Twp.
-            Transcontinental	Transcon.
-            Transport[ation]	Transp.
-            Trustee	Tr.
-            Turnpike	Tpk.
-            U	
-            Uniform	Unif.
-            University	Univ.
-            Utility	Util.
-            United States U.S.
-            United States of America U.S.
-            V	
-            Village	Vill.
-            W	
-            West[ern]	W.
-            
-
-    """
-#            Very important, don't use any other abbreviation that is not on the previous list.
-#            Just return the title with the abbriviated words (if applicable), nothing else.   
-
-    abreviated_response = client.chat.completions.create(
-    model = GPTModelLight,
-    temperature = 0.2,
-    max_tokens = 600,
-    messages = [
-        {"role": "system", "content": prompt_abreviation},
-        {"role": "user", "content": title_case}
-        ]
-    )
-    print (abreviated_response.choices[0].message.content)
-    
-    title_case = abreviated_response.choices[0].message.content
-    
+    print(title_case + ' : NLP')
     return title_case
+    
+#     #if needed, use the following abbreviation table to abbreviate any word of the title, only use 
+#     #        abbreviation from this table, don't abbreviate any word that is not in the table :
+#     prompt_abreviation = """
+#             Given the title, abbreviate words ONLY if they appear EXACTLY as listed in the table below. Do not abbreviate parts of words or create new abbreviations.
+#             Critical rules:
+
+#             Only abbreviate whole words that match the left column of the table EXACTLY.
+#             Do not abbreviate any word that is not in the table.
+#             Do not create new abbreviations or modify existing ones.
+#             If a word is not in the table, leave it unchanged.
+#             Return the title with only the allowed abbreviations, if any. Otherwise, return the title unchanged.
+#             Double-check your work to ensure no unauthorized abbreviations are used.
+#             Do it word by word to ensure any word matches or not an abbreviation.
+            
+#             Here is the abbreviation table :
+            
+#             Academy	Acad.
+#             Administrat[ive,ion]	Admin.
+#             Administrat[or,rix]	Adm'[r,x]
+#             America[n]	Am.
+#             and	&
+#             Associate	Assoc.
+#             Association	Ass'n
+#             Atlantic	Atl.
+#             Authority	Auth.
+#             Automo[bile, tive]	Auto.
+#             Avenue	Ave.
+            	
+#             Board	Bd.
+#             Broadcast[ing]	Broad.
+#             Brotherhood	Bhd.
+#             Brothers	Bros.
+#             Building	Bldg.
+#             Business	Bus.
+            	
+#             Casualty	Cas.
+#             Cent[er, re]	Ctr.
+#             Central	Cent.
+#             Chemical	Chem.
+#             Coalition	Coal.
+#             College	Coll.
+#             Commission	Comm'n
+#             Commissioner	Comm'r
+#             Committee	Comm.
+#             Communication	Commc'n
+#             Community	Cmty.
+#             Company	Co.
+#             Compensation	Comp.
+#             Condominium	Condo.
+#             Congress[ional]	Cong.
+#             Consolidated	Consol.
+#             Construction	Constr.
+#             Continental	Cont'l
+#             Cooperative	Coop.
+#             Corporation	Corp.
+#             Correction[s, al]	Corr.
+            	
+#             Defense	Def.
+#             Department	Dep't
+#             Detention	Det.
+#             Development	Dev.
+#             Director	Dir.
+#             Distribut[or, ing]	Distrib.
+#             District	Dist.
+#             Division	Div.
+            	
+#             East[ern]	E.
+#             Econom[ic, ics, ical, y]	Econ.
+#             Education[al]	Educ.
+#             Electric[al, ity]	Elec.
+#             Electronic	Elec.
+#             Engineer	Eng'r
+#             Engineering	Eng'g
+#             Enterprise	Enter.
+#             Entertainment	Ent.
+#             Environment	Env't
+#             Environmental	Envtl.
+#             Equality	Equal.
+#             Equipment	Equip.
+#             Examiner	Exam'r
+#             Exchange	Exch.
+#             Execut[or, rix]	Ex'[r, x]
+#             Export[er, ation]	Exp.
+            	
+#             Federal	Fed.
+#             Federation	Fed'n
+#             Fidelity	Fid.
+#             Finance[e, ial, ing]	Fin.
+#             Foundation	Found.
+            	
+#             General	Gen.
+#             Government	Gov't
+#             Guaranty	Guar.
+            	
+#             Hospital	Hosp.
+#             Housing	Hous.
+            	
+#             Import[er, ation]	Imp.
+#             Incorporated	Inc.
+#             Indemnity	Indem.
+#             Independent	Indep.
+#             Industr[y, ies, ial]	Indus.
+#             Information	Info.
+#             Institut[e, ion]	Inst.
+#             Insurance	Ins.
+#             International	Int'l
+#             Investment	Inv.
+            	
+            	
+            	
+#             Laboratory	Lab.
+#             Liability	Liab.
+#             Limited	Ltd.
+#             Litigation	Litig.
+            	
+#             Machine[ry]	Mach.
+#             Maintenance	Maint.
+#             Management	Mgmt.
+#             Manufacturer	Mfr.
+#             Manufacturing	Mfg.
+#             Maritime	Mar.
+#             Market	Mkt.
+#             Marketing	Mktg.
+#             Mechanic[al]	Mech.
+#             Medic[al, ine]	Med.
+#             Memorial	Mem'l
+#             Merchan[t, dise, dising]	Merch.
+#             Metropolitan	Metro.
+#             Municipal	Mun.
+#             Mutual	Mut.
+            	
+#             National	Nat'l
+#             North[ern]	N.
+#             Northeast[ern]	Ne.
+#             Northwest[ern]	Nw.
+#             Number	No.
+            	
+#             Organiz[ation, ing]	Org.
+            	
+#             Pacific	Pac.
+#             Partnership	P'ship
+#             Person[al, nel]	Pers.
+#             Pharmaceutic[s, al]	Pharm.
+#             Preserv[e, ation]	Pres.
+#             Probation	Prob.
+#             Product[ion]	Prod.
+#             Professional	Prof'l
+#             Property	Prop.
+#             Protection	Prot.
+#             Public	Pub.
+#             Publication	Publ'n
+#             Publishing	Publ'g
+            	
+            	
+#             Railroad	R.R.
+#             Railway	Ry.
+#             Refining	Ref.
+#             Regional	Reg'l
+#             Rehabilitation	Rehab.
+#             Reproduct[ion, ive]	Reprod.
+#             Resource[s]	Res.
+#             Restaurant	Rest.
+#             Retirement	Ret.
+#             Road	Rd.
+            	
+#             Savings	Sav.
+#             School[s]	Sch.
+#             Science	Sci.
+#             Secretary	Sec'y
+#             Securit[y, ies]	Sec.
+#             Service	Serv.
+#             Shareholder	S'holder
+#             Social	Soc.
+#             Society	Soc'y
+#             South[ern]	S.
+#             Southwest[ern]	Sw.
+#             Steamship[s]	S.S.
+#             Street	St.
+#             Subcommittee	Subcomm.
+#             Surety	Sur.
+#             System[s]	Sys.
+            	
+#             Technology	Tech.
+#             Telecommunication	Telecomm.
+#             Tele[phone, graph]	Tel.
+#             Temporary	Temp.
+#             Township	Twp.
+#             Transcontinental	Transcon.
+#             Transport[ation]	Transp.
+#             Trustee	Tr.
+#             Turnpike	Tpk.
+            	
+#             Uniform	Unif.
+#             University	Univ.
+#             Utility	Util.
+#             United States U.S.
+#             United States of America U.S.
+            	
+#             Village	Vill.
+            	
+#             West[ern]	W.
+            
+#             ------------
+#             end of table.
+            
+#             Abbreviate the following title using ONLY the exact abbreviations from the table, just return the title nothing else:
+#     """
+# #            Very important, don't use any other abbreviation that is not on the previous list.
+# #            Just return the title with the abbriviated words (if applicable), nothing else.   
+
+#     abreviated_response = client.chat.completions.create(
+#     model = GPTModel,
+#     temperature = 0.0,
+#     max_tokens = 600,
+#     messages = [
+#         {"role": "system", "content": prompt_abreviation},
+#         {"role": "user", "content": title_case}
+#         ]
+#     )
+#     print (abreviated_response.choices[0].message.content + ' : chatgpt')
+    
+#     #title_case = abreviated_response.choices[0].message.content
+    
+    
+    
+#     messageClaude = clientClaude.messages.create(
+#         model="claude-3-5-sonnet-20240620",
+#         max_tokens=1000,
+#         temperature=0,
+#         messages=[
+#             {
+#                 "role": "user",
+#                 "content": title_case,
+#             }
+#         ],
+#         system=prompt_abreviation,
+#     )
+    
+#     print(messageClaude.content[0].text.strip() + ' : claude')
+            
+#     title_case = messageClaude.content[0].text.strip()
+    
+#     return title_case
 
 def Connecticut_summarizer(value):
     summary =""
