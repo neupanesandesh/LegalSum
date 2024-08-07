@@ -426,7 +426,7 @@ def text_summarizer_alternate(value):
     
     Also don''t use formulas like : in this case, judgment or things like "In the case before the United States district court for the District of New Jersey" because we already have that information ahead
     Do not need to repeat the name of the case.
-    You can use "court", instead of the court, it can be also Family court, instead of the family court.
+    Use "court", instead of "the court", it can be also "family court" etc.., instead of "the family court", basically remove "the".
     Answer in a professional way, don''t invent, stick to the facts.
     if you copy text from the orginal case put into quotes " " .
     Expresion like "filed a motion", can be replaced by "moved to".
