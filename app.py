@@ -421,12 +421,16 @@ def text_summarizer_alternate(value):
     4. The trial court''s findings  (2 - 4 sentences)
     5. The  court''s decision (2 - 4 sentences)
     The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case.
-    The summary needs to be without the titles of the sections , in one block of text. Also you can roles like : plaintiff, defendent etc... when needed.
+    The summary needs to be without the titles of the sections , in one block of text. Also you can use roles like : plaintiff, defendent etc... when needed.
+    If there is only one plaintiff, defendent or petitioner, then use "Defendant" or "Plaintiff" or "Petitioner" instead of the name.
+    
     Also don''t use formulas like : in this case, judgment or things like "In the case before the United States district court for the District of New Jersey" because we already have that information ahead
     Do not need to repeat the name of the case.
+    You can use "court", instead of the court, it can be also Family court, instead of the family court.
     Answer in a professional way, don''t invent, stick to the facts.
     if you copy text from the orginal case put into quotes " " .
-    if there are number don''t put them into letters, keep them in numbers like 98 or if percentage : 98%.
+    Expresion like "filed a motion", can be replaced by "moved to".
+    if there are number don''t put them into letters if they are 10 or above, keep them in numbers like 98 or if percentage : 98%.
     if defendant and plaintiff do not start a sentence then they should not be capitalized, even if they are capitlized in the legal decison, don''t capitlize unless it starts a sentence.
     Keep it between 195-325 tokens."""
     
@@ -485,15 +489,17 @@ def title(value):
             If it is a person just keep his last name and don't put his first name. 
             If it is a company or organization, it needs to keep the whole name, don't abbreviate anything.
             If it is a State of the USA, just mention the State name.
-            extract the case name from a legal text similar to the following format:
             
+            If the title has the following format plaintiff vs defendant, ONLY if it has that format, then extract the case name from a legal text similar to the following format:
             [Plaintiff Lastname] v. [Defendant Lastname]
             Use Capital letter for the first letter of each word when it makes sense, not needed for capitalization preposition words like "of" or standing letter like v.
             
+            If the title has a different format, keep the same format, remove any code or reference, that is not part of the title case and use the previous rules.
 
             just return the title as an answer nothing else.
     
             """
+    
     title_response = client.chat.completions.create(
     model = GPTModel,
     temperature = 0.0,
