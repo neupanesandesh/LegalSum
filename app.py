@@ -430,7 +430,7 @@ def text_summarizer_alternate(value):
     5. The  court''s decision (2 - 4 sentences)
     The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case.
     The summary needs to be without the titles of the sections , in one block of text. Also you can use roles like : plaintiff, defendent etc... when needed.
-    If there is only one plaintiff, defendent or petitioner, then use "Defendant" or "Plaintiff" or "Petitioner" instead of the name.
+    If there is only one plaintiff, defendent or petitioner, then use "defendant" or "plaintiff" or "petitioner" instead of the name.
     
     Also don''t use formulas like : in this case, judgment or things like "In the case before the United States district court for the District of New Jersey" because we already have that information ahead
     Do not need to repeat the name of the case.
@@ -487,6 +487,23 @@ def text_summarizer_alternate(value):
     )
     
     summary_response = responseCourt.choices[0].message.content.strip()
+    summary_response = ' '.join(summary_response.splitlines())
+
+    OnePlaintiff_prompt = """
+    If there is only one plaintiff, defendent or petitioner, then use "defendant" or "plaintiff" or "petitioner" instead of the name.
+    Just send the resultant text, nothing else.
+    """
+    responseOnePlaintiff = client.chat.completions.create(
+        model=GPTModelLight,
+        temperature=0.0,
+        max_tokens=600,
+        messages=[
+            {"role": "system", "content": OnePlaintiff_prompt},
+            {"role": "user", "content": summary_response}
+        ]
+    )
+    
+    summary_response = responseOnePlaintiff.choices[0].message.content.strip()
     summary_response = ' '.join(summary_response.splitlines())
     
     summary_response = summary_response.replace("$", "&#36;")
