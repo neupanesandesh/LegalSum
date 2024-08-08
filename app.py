@@ -429,8 +429,8 @@ def text_summarizer_alternate(value):
     4. The trial court''s findings  (2 - 4 sentences)
     5. The  court''s decision (2 - 4 sentences)
     The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case.
-    The summary needs to be without the titles of the sections , in one block of text. Also you can use roles like : plaintiff, defendent etc... when needed.
-    If there is only one plaintiff, defendent or petitioner, then use "defendant" or "plaintiff" or "petitioner" instead of the name.
+    The summary needs to be without the titles of the sections , in one block of text. Also you can use roles like : plaintiff, defendant etc... when needed.
+    If there is only one plaintiff, defendant or petitioner, then use "defendant" or "plaintiff" or "petitioner" instead of the name.
     
     Also don''t use formulas like : in this case, judgment or things like "In the case before the United States district court for the District of New Jersey" because we already have that information ahead
     Do not need to repeat the name of the case.
@@ -490,7 +490,7 @@ def text_summarizer_alternate(value):
     summary_response = ' '.join(summary_response.splitlines())
 
     OnePlaintiff_prompt = """
-    If there is only one plaintiff, defendent or petitioner, then use "defendant" or "plaintiff" or "petitioner" instead of the name.
+    If there is only one plaintiff, defendant or petitioner, then use "defendant" or "plaintiff" or "petitioner" instead of the name.
     Just send the resultant text, nothing else.
     """
     responseOnePlaintiff = client.chat.completions.create(
@@ -528,7 +528,7 @@ def title(value):
     
     prompt_title = """
             Give the title of the legal case, take the current title first, then here are the rules : 
-            If there are several defendents, just take the first one.
+            If there are several defendants, just take the first one.
             If it is a person just keep his last name and don't put his first name. 
             If it is a company or organization, it needs to keep the whole name, don't abbreviate anything.
             If it is a State of the USA, just mention the State name.
