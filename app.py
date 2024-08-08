@@ -7,9 +7,17 @@ from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
 import nltk
 from nltk.tokenize import word_tokenize
+from nltk.data import find
 
-# Download necessary NLTK data
-nltk.download('punkt')
+def ensure_nltk_data():
+    """Check if required NLTK data is present, and download it if necessary."""
+    try:
+        # Check if 'punkt' tokenizer data is available
+        find('tokenizers/punkt')
+    except LookupError:
+        # Data is not available, so download it
+        print("Downloading NLTK 'punkt' data...")
+        nltk.download('punkt')
 
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
 client = OpenAI(
@@ -426,7 +434,7 @@ def text_summarizer_alternate(value):
     
     Also don''t use formulas like : in this case, judgment or things like "In the case before the United States district court for the District of New Jersey" because we already have that information ahead
     Do not need to repeat the name of the case.
-    Use "court", instead of "the court", it can be also "family court" etc.., instead of "the family court", basically remove "the".
+    Use "court", instead of "the court", it can be also "family court" etc.., instead of "the family court", basically remove "the" when it is the court or similar.
     Answer in a professional way, don''t invent, stick to the facts.
     if you copy text from the orginal case put into quotes " " .
     Expresion like "filed a motion", can be replaced by "moved to".
@@ -463,8 +471,26 @@ def text_summarizer_alternate(value):
     summary_response = response.choices[0].message.content.strip()
     summary_response = ' '.join(summary_response.splitlines())
 
-    summary_response = summary_response.replace("$", "&#36;") # avoiding issues with $
-
+    # court word check, remove the
+    courtRemoveThe_prompt = """
+    I will send a text, don't change anything, expect that if there is mention of the "the court" or any other court, just remove the word "the" and just use court, capitalize after a point.
+    Just send the resultant text, nothing else.
+    """
+    responseCourt = client.chat.completions.create(
+        model=GPTModelLight,
+        temperature=0.0,
+        max_tokens=600,
+        messages=[
+            {"role": "system", "content": courtRemoveThe_prompt},
+            {"role": "user", "content": summary_response}
+        ]
+    )
+    
+    summary_response = responseCourt.choices[0].message.content.strip()
+    summary_response = ' '.join(summary_response.splitlines())
+    
+    summary_response = summary_response.replace("$", "&#36;")
+    
     return summary_response 
 
 def abbreviate_title(title):
@@ -499,7 +525,6 @@ def title(value):
             just return the title as an answer nothing else.
     
             """
-    
     title_response = client.chat.completions.create(
     model = GPTModel,
     temperature = 0.0,
@@ -509,6 +534,7 @@ def title(value):
         {"role": "user", "content": value}
         ]
     )
+    print("new2")
     print (title_response.choices[0].message.content)
     
     title_case = title_response.choices[0].message.content
@@ -517,250 +543,6 @@ def title(value):
     
     print(title_case + ' : NLP')
     return title_case
-    
-#     #if needed, use the following abbreviation table to abbreviate any word of the title, only use 
-#     #        abbreviation from this table, don't abbreviate any word that is not in the table :
-#     prompt_abreviation = """
-#             Given the title, abbreviate words ONLY if they appear EXACTLY as listed in the table below. Do not abbreviate parts of words or create new abbreviations.
-#             Critical rules:
-
-#             Only abbreviate whole words that match the left column of the table EXACTLY.
-#             Do not abbreviate any word that is not in the table.
-#             Do not create new abbreviations or modify existing ones.
-#             If a word is not in the table, leave it unchanged.
-#             Return the title with only the allowed abbreviations, if any. Otherwise, return the title unchanged.
-#             Double-check your work to ensure no unauthorized abbreviations are used.
-#             Do it word by word to ensure any word matches or not an abbreviation.
-            
-#             Here is the abbreviation table :
-            
-#             Academy	Acad.
-#             Administrat[ive,ion]	Admin.
-#             Administrat[or,rix]	Adm'[r,x]
-#             America[n]	Am.
-#             and	&
-#             Associate	Assoc.
-#             Association	Ass'n
-#             Atlantic	Atl.
-#             Authority	Auth.
-#             Automo[bile, tive]	Auto.
-#             Avenue	Ave.
-            	
-#             Board	Bd.
-#             Broadcast[ing]	Broad.
-#             Brotherhood	Bhd.
-#             Brothers	Bros.
-#             Building	Bldg.
-#             Business	Bus.
-            	
-#             Casualty	Cas.
-#             Cent[er, re]	Ctr.
-#             Central	Cent.
-#             Chemical	Chem.
-#             Coalition	Coal.
-#             College	Coll.
-#             Commission	Comm'n
-#             Commissioner	Comm'r
-#             Committee	Comm.
-#             Communication	Commc'n
-#             Community	Cmty.
-#             Company	Co.
-#             Compensation	Comp.
-#             Condominium	Condo.
-#             Congress[ional]	Cong.
-#             Consolidated	Consol.
-#             Construction	Constr.
-#             Continental	Cont'l
-#             Cooperative	Coop.
-#             Corporation	Corp.
-#             Correction[s, al]	Corr.
-            	
-#             Defense	Def.
-#             Department	Dep't
-#             Detention	Det.
-#             Development	Dev.
-#             Director	Dir.
-#             Distribut[or, ing]	Distrib.
-#             District	Dist.
-#             Division	Div.
-            	
-#             East[ern]	E.
-#             Econom[ic, ics, ical, y]	Econ.
-#             Education[al]	Educ.
-#             Electric[al, ity]	Elec.
-#             Electronic	Elec.
-#             Engineer	Eng'r
-#             Engineering	Eng'g
-#             Enterprise	Enter.
-#             Entertainment	Ent.
-#             Environment	Env't
-#             Environmental	Envtl.
-#             Equality	Equal.
-#             Equipment	Equip.
-#             Examiner	Exam'r
-#             Exchange	Exch.
-#             Execut[or, rix]	Ex'[r, x]
-#             Export[er, ation]	Exp.
-            	
-#             Federal	Fed.
-#             Federation	Fed'n
-#             Fidelity	Fid.
-#             Finance[e, ial, ing]	Fin.
-#             Foundation	Found.
-            	
-#             General	Gen.
-#             Government	Gov't
-#             Guaranty	Guar.
-            	
-#             Hospital	Hosp.
-#             Housing	Hous.
-            	
-#             Import[er, ation]	Imp.
-#             Incorporated	Inc.
-#             Indemnity	Indem.
-#             Independent	Indep.
-#             Industr[y, ies, ial]	Indus.
-#             Information	Info.
-#             Institut[e, ion]	Inst.
-#             Insurance	Ins.
-#             International	Int'l
-#             Investment	Inv.
-            	
-            	
-            	
-#             Laboratory	Lab.
-#             Liability	Liab.
-#             Limited	Ltd.
-#             Litigation	Litig.
-            	
-#             Machine[ry]	Mach.
-#             Maintenance	Maint.
-#             Management	Mgmt.
-#             Manufacturer	Mfr.
-#             Manufacturing	Mfg.
-#             Maritime	Mar.
-#             Market	Mkt.
-#             Marketing	Mktg.
-#             Mechanic[al]	Mech.
-#             Medic[al, ine]	Med.
-#             Memorial	Mem'l
-#             Merchan[t, dise, dising]	Merch.
-#             Metropolitan	Metro.
-#             Municipal	Mun.
-#             Mutual	Mut.
-            	
-#             National	Nat'l
-#             North[ern]	N.
-#             Northeast[ern]	Ne.
-#             Northwest[ern]	Nw.
-#             Number	No.
-            	
-#             Organiz[ation, ing]	Org.
-            	
-#             Pacific	Pac.
-#             Partnership	P'ship
-#             Person[al, nel]	Pers.
-#             Pharmaceutic[s, al]	Pharm.
-#             Preserv[e, ation]	Pres.
-#             Probation	Prob.
-#             Product[ion]	Prod.
-#             Professional	Prof'l
-#             Property	Prop.
-#             Protection	Prot.
-#             Public	Pub.
-#             Publication	Publ'n
-#             Publishing	Publ'g
-            	
-            	
-#             Railroad	R.R.
-#             Railway	Ry.
-#             Refining	Ref.
-#             Regional	Reg'l
-#             Rehabilitation	Rehab.
-#             Reproduct[ion, ive]	Reprod.
-#             Resource[s]	Res.
-#             Restaurant	Rest.
-#             Retirement	Ret.
-#             Road	Rd.
-            	
-#             Savings	Sav.
-#             School[s]	Sch.
-#             Science	Sci.
-#             Secretary	Sec'y
-#             Securit[y, ies]	Sec.
-#             Service	Serv.
-#             Shareholder	S'holder
-#             Social	Soc.
-#             Society	Soc'y
-#             South[ern]	S.
-#             Southwest[ern]	Sw.
-#             Steamship[s]	S.S.
-#             Street	St.
-#             Subcommittee	Subcomm.
-#             Surety	Sur.
-#             System[s]	Sys.
-            	
-#             Technology	Tech.
-#             Telecommunication	Telecomm.
-#             Tele[phone, graph]	Tel.
-#             Temporary	Temp.
-#             Township	Twp.
-#             Transcontinental	Transcon.
-#             Transport[ation]	Transp.
-#             Trustee	Tr.
-#             Turnpike	Tpk.
-            	
-#             Uniform	Unif.
-#             University	Univ.
-#             Utility	Util.
-#             United States U.S.
-#             United States of America U.S.
-            	
-#             Village	Vill.
-            	
-#             West[ern]	W.
-            
-#             ------------
-#             end of table.
-            
-#             Abbreviate the following title using ONLY the exact abbreviations from the table, just return the title nothing else:
-#     """
-# #            Very important, don't use any other abbreviation that is not on the previous list.
-# #            Just return the title with the abbriviated words (if applicable), nothing else.   
-
-#     abreviated_response = client.chat.completions.create(
-#     model = GPTModel,
-#     temperature = 0.0,
-#     max_tokens = 600,
-#     messages = [
-#         {"role": "system", "content": prompt_abreviation},
-#         {"role": "user", "content": title_case}
-#         ]
-#     )
-#     print (abreviated_response.choices[0].message.content + ' : chatgpt')
-    
-#     #title_case = abreviated_response.choices[0].message.content
-    
-    
-    
-#     messageClaude = clientClaude.messages.create(
-#         model="claude-3-5-sonnet-20240620",
-#         max_tokens=1000,
-#         temperature=0,
-#         messages=[
-#             {
-#                 "role": "user",
-#                 "content": title_case,
-#             }
-#         ],
-#         system=prompt_abreviation,
-#     )
-    
-#     print(messageClaude.content[0].text.strip() + ' : claude')
-            
-#     title_case = messageClaude.content[0].text.strip()
-    
-#     return title_case
 
 def Connecticut_summarizer(value):
     summary =""
@@ -1184,6 +966,8 @@ def is_positive_integer(value):
     
 # Define the Streamlit app
 def main():
+    
+    ensure_nltk_data()
     global page_count
     st.image('MESJ.jpg')
     st.title("Legal Decision Summarizer")
