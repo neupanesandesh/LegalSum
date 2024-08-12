@@ -9,6 +9,8 @@ import nltk
 from nltk.tokenize import word_tokenize
 from nltk.data import find
 
+nltk.download('punkt')
+
 def ensure_nltk_data():
     """Check if required NLTK data is present, and download it if necessary."""
     try:
