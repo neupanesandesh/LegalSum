@@ -442,7 +442,7 @@ def text_summarizer_alternate(value):
     Expresion like "filed a motion", can be replaced by "moved to".
     if there are number don''t put them into letters if they are 10 or above, keep them in numbers like 98 or if percentage : 98%.
     if defendant and plaintiff do not start a sentence then they should not be capitalized, even if they are capitlized in the legal decison, don''t capitlize unless it starts a sentence.
-    Keep it between 195-325 tokens."""
+    Keep it between 195-375 tokens."""
     
     context = context + """
     In your summary, please ensure the following key aspects are addressed:
@@ -471,41 +471,6 @@ def text_summarizer_alternate(value):
     )
     
     summary_response = response.choices[0].message.content.strip()
-    summary_response = ' '.join(summary_response.splitlines())
-
-    # court word check, remove the
-    courtRemoveThe_prompt = """
-    I will send a text, don't change anything, expect that if there is mention of the "the court" or any other court, just remove the word "the" and just use court, capitalize after a point.
-    Just send the resultant text, nothing else.
-    """
-    responseCourt = client.chat.completions.create(
-        model=GPTModelLight,
-        temperature=0.0,
-        max_tokens=600,
-        messages=[
-            {"role": "system", "content": courtRemoveThe_prompt},
-            {"role": "user", "content": summary_response}
-        ]
-    )
-    
-    summary_response = responseCourt.choices[0].message.content.strip()
-    summary_response = ' '.join(summary_response.splitlines())
-
-    OnePlaintiff_prompt = """
-    If there is only one plaintiff, defendant or petitioner, then use "defendant" or "plaintiff" or "petitioner" instead of the name.
-    Just send the resultant text, nothing else.
-    """
-    responseOnePlaintiff = client.chat.completions.create(
-        model=GPTModelLight,
-        temperature=0.0,
-        max_tokens=600,
-        messages=[
-            {"role": "system", "content": OnePlaintiff_prompt},
-            {"role": "user", "content": summary_response}
-        ]
-    )
-    
-    summary_response = responseOnePlaintiff.choices[0].message.content.strip()
     summary_response = ' '.join(summary_response.splitlines())
     
     summary_response = summary_response.replace("$", "&#36;")
