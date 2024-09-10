@@ -10,6 +10,12 @@ credentials:
       logged_in: true
       name: Amor
       password: $2b$12$wmbbG9q9Z3j5Olm0FV4Zh.YRWzd9iU/u6fq8/8/IRIgiL1D8m9WTy
+    jack:
+      email: jritche1@gmail.com
+      failed_login_attempts: 0
+      logged_in: true
+      name: Jack
+      password: $2b$12$IZROoNVTgE.5WswaS0.f8.wJAGPu3usHAzu8PtEdndyVfd2wPJGFG
     james:
       email: johnson.jamesm1987@gmail.com
       failed_login_attempts: 0
