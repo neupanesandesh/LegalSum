@@ -16,3 +16,7 @@ usernames:
     role: admin
   laura:
     role: admin
+  jack:
+    role: user
+    states:
+    - Connecticut
