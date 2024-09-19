@@ -2,6 +2,7 @@ import streamlit as st
 from nameparser import HumanName
 from openai import OpenAI
 import re
+import pdfplumber
 import yaml
 from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
@@ -409,6 +410,27 @@ def extract_first_two_pages(text):
     first_two_pages = lines[:lines_per_page*2]
 
     return '\n'.join(first_two_pages)
+
+def extract_text_from_pdf(pdf_file):
+    header = [] 
+    footer = []
+    body_text = []
+    
+    with pdfplumber.open(pdf_file) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+            if text:
+                lines = text.split("\n")
+
+                header = lines[:2]  # First two lines as header
+                footer = lines[-2:]  # Last two lines as footer
+                body = lines[2:-2]   # Everything between the header and footer
+                
+                header.append(" ".join(header))
+                footer.append(" ".join(footer))
+                body_text.append(" ".join(body)) 
+    return header, footer, body_text
+
 def remove_suffix(s):
     if s.endswith("CV"):
         return s[:-3]  # Remove last 2 characters
@@ -1068,16 +1090,25 @@ def main():
                             st.error(e)
                         with open('config.YAML', 'w') as file:
                             yaml.dump(config, file, default_flow_style=False)
-
+                                        
+            choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
+            
+            user_input = None
+            user_pdf_input = None
+            
+            if choice1 == 'Copy-Paste Text':
             # Create a text input field for the legal decision
-            user_input = st.text_area("Enter legal decision:", height=150) 
+                user_input = st.text_area("Enter legal decision:", height=150) 
+            
+            elif choice1 == 'Upload Document':
+                user_pdf_input = st.file_uploader("Upload your document", type=["pdf"])    
             
             # Create a numeric input for the page count
             #page_count = st.number_input("Page count:", min_value=1, value=1, step=1)
             
             # Create a text input for the page count
             #page_count_input = st.text_input("Page count:", value="1")
-
+ 
             # # Validate the input
             # if is_positive_integer(page_count_input):
             #     page_count = int(page_count_input)
@@ -1086,13 +1117,26 @@ def main():
             #     st.error("Please enter a valid positive integer for the page count.")
             
             # Create a dropdown to select the US State
-            first_two_pages = extract_first_two_pages(user_input)
+            if user_input:
+                first_two_pages = extract_first_two_pages(user_input)
+            elif user_pdf_input:
+                header, footer, body_text = extract_text_from_pdf(user_pdf_input)
+                if body_text: 
+                    combined_text = "\n".join(header) + "\n" + "\n".join(body_text) + "\n" + "\n".join(footer)
+                
+                    first_two_pages = extract_first_two_pages(combined_text)
+                else:
+                    st.error("The uploaded PDF appears to be an image of text and does not contain extractable text.")
+                    first_two_pages = None
+            else:
+                first_two_pages = None  
+                      
             if role =="user" :
                 try:
                     states = roles_config["usernames"][username]["states"]
                 except : states=[]
             else : states = ["New Jersey", "Texas","Connecticut"]
-            state = st.selectbox("Select a US State:", states)
+            state = st.selectbox("Select a US State:", states)  
             
             # Only show the page count option if the selected state is not Texas
             if state != "Texas":
