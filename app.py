@@ -1125,7 +1125,7 @@ def main():
                 user_input = st.text_area("Enter legal decision:", height=150) 
             
             elif choice1 == 'Upload Document':
-                user_pdf_input = st.file_uploader("Upload your document", type=["pdf"])    
+                user_pdf_input = st.file_uploader("Upload your document", type=["pdf","docx"])    
             
             # Create a numeric input for the page count
             #page_count = st.number_input("Page count:", min_value=1, value=1, step=1)
