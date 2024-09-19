@@ -9,6 +9,7 @@ import streamlit_authenticator as stauth
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.data import find
+from docx import Document
 
 nltk.download('punkt')
 
@@ -430,6 +431,29 @@ def extract_text_from_pdf(pdf_file):
                 footer.append(" ".join(footer))
                 body_text.append(" ".join(body)) 
     return header, footer, body_text
+
+
+def extract_text_from_docx(docx_file):
+    doc = Document(docx_file)
+    full_text = []
+    
+    for paragraph in doc.paragraphs:
+        full_text.append(paragraph.text)
+    
+    lines = full_text
+    header = lines[:2]  # First two lines as header
+    footer = lines[-2:]  # Last two lines as footer
+    body_text = lines[2:-2]  # Everything between the header and footer
+    
+    return header, footer, body_text
+
+def extract_text(file):
+    if file.name.endswith('.pdf'):
+        return extract_text_from_pdf(file)
+    elif file.name.endswith('.docx'):
+        return extract_text_from_docx(file)
+    else:
+        return None, None
 
 def remove_suffix(s):
     if s.endswith("CV"):
@@ -1120,7 +1144,7 @@ def main():
             if user_input:
                 first_two_pages = extract_first_two_pages(user_input)
             elif user_pdf_input:
-                header, footer, body_text = extract_text_from_pdf(user_pdf_input)
+                header, footer, body_text = extract_text(user_pdf_input)
                 if body_text: 
                     combined_text = "\n".join(header) + "\n" + "\n".join(body_text) + "\n" + "\n".join(footer)
                 
