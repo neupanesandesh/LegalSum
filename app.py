@@ -23,7 +23,7 @@ def ensure_nltk_data():
 
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
 client = OpenAI(
-    api_key = "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",
+    api_key = "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",
 )
 
 page_count= None
