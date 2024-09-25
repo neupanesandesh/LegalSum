@@ -2,6 +2,7 @@ import streamlit as st
 from nameparser import HumanName
 from openai import OpenAI
 import re
+import os
 import pdfplumber
 import yaml
 from yaml.loader import SafeLoader
@@ -9,9 +10,11 @@ import streamlit_authenticator as stauth
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.data import find
-from docx import Document
-
+import docx2txt
 nltk.download('punkt')
+
+
+
 
 def ensure_nltk_data():
     """Check if required NLTK data is present, and download it if necessary."""
@@ -22,10 +25,10 @@ def ensure_nltk_data():
         # Data is not available, so download it
         print("Downloading NLTK 'punkt' data...")
         nltk.download('punkt')
-
+ 
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
 client = OpenAI(
-    api_key = "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",
+    api_key = "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",
 )
 
 page_count= None
@@ -413,47 +416,60 @@ def extract_first_two_pages(text):
     return '\n'.join(first_two_pages)
 
 def extract_text_from_pdf(pdf_file):
-    header = [] 
-    footer = []
-    body_text = []
-    
+    all_text = ""
     with pdfplumber.open(pdf_file) as pdf:
-        for page in pdf.pages:
-            text = page.extract_text()
-            if text:
-                lines = text.split("\n")
+        for page_num, page in enumerate(pdf.pages):
+            page_text = page.extract_text()
+            header_text = page.extract_text(x_tolerance=2, y_tolerance=2, layout=True).split('\n')[0] if page_text else ""
+            
+            if page_num == 0:
+                all_text += f"Header: {header_text.strip()}{page_text.strip()}\n\n"
 
-                header = lines[:2]  # First two lines as header
-                footer = lines[-2:]  # Last two lines as footer
-                body = lines[2:-2]   # Everything between the header and footer
-                
-                header.append(" ".join(header))
-                footer.append(" ".join(footer))
-                body_text.append(" ".join(body)) 
-    return header, footer, body_text
+            else:
+                all_text += f"Header: {header_text.strip()}{page_text.strip()}\n\n"
+
+    
+    return all_text.strip()
 
 
 def extract_text_from_docx(docx_file):
-    doc = Document(docx_file)
-    full_text = []
-    
-    for paragraph in doc.paragraphs:
-        full_text.append(paragraph.text)
-    
-    lines = full_text
-    header = lines[:2]  # First two lines as header
-    footer = lines[-2:]  # Last two lines as footer
-    body_text = lines[2:-2]  # Everything between the header and footer
-    
-    return header, footer, body_text
+    """
+    Extract text from a DOCX file, removing duplicate headers.
+
+    Parameters:
+        docx_file (str): Path to the DOCX file. 
+
+    Returns:
+        str: Extracted text with formatting.
+    """
+    try:
+        full_text = docx2txt.process(docx_file)  # Extract text from the document
+
+        # Replace line breaks with spaces and keep page breaks as new lines
+        formatted_text = full_text # Replace line breaks with a space
+        formatted_text = formatted_text.replace('\f', '\n')  # Replace page breaks with new lines
+
+        # Split into lines and filter out duplicates
+        lines = formatted_text.splitlines()
+        unique_lines = list(dict.fromkeys(lines))  # Remove duplicates while preserving order
+
+        # Recombine the unique lines
+        cleaned_text = '\n'.join(unique_lines) # Join unique lines with new lines
+
+        return cleaned_text
+    except Exception as e:
+        return f"Error extracting text: {e}"
 
 def extract_text(file):
-    if file.name.endswith('.pdf'):
-        return extract_text_from_pdf(file)
-    elif file.name.endswith('.docx'):
-        return extract_text_from_docx(file)
+    if file is not None:  # Ensure the file is not None
+        if file.name.endswith('.pdf'):
+            return extract_text_from_pdf(file)
+        elif file.name.endswith('.docx'):
+            return extract_text_from_docx(file)
+        else:
+            return None
     else:
-        return None, None
+        return None
 
 def remove_suffix(s):
     if s.endswith("CV"):
@@ -1000,7 +1016,12 @@ def main():
     ensure_nltk_data()
     global page_count
     st.image('MESJ.jpg')
-    st.title("Legal Decision Summarizer")
+    app_mode = st.sidebar.selectbox("Choose your preference:", ["Legal Decision Summarizer", "Newsletter Quotes"])
+    if app_mode == "Legal Decision Summarizer":
+        st.title("Legal Decision Summarizer")
+    elif app_mode == "Newsletter Quotes":
+        st.title("Newsletter Quotes")
+    
     with open('config.YAML') as file:
         config = yaml.load(file, Loader=SafeLoader)
     with open('cfg1.YAML') as file:
@@ -1117,15 +1138,23 @@ def main():
                                         
             choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
             
-            user_input = None
-            user_pdf_input = None
-            
             if choice1 == 'Copy-Paste Text':
             # Create a text input field for the legal decision
                 user_input = st.text_area("Enter legal decision:", height=150) 
+                first_two_pages = extract_first_two_pages(user_input)
             
             elif choice1 == 'Upload Document':
-                user_pdf_input = st.file_uploader("Upload your document", type=["pdf","docx"])    
+                user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])  
+                if user_file_input is not None:  # Check if a file was uploaded
+                    combined_text = extract_text(user_file_input)
+                    if combined_text:
+                        first_two_pages = extract_first_two_pages(combined_text)
+                        user_input = combined_text  # Assign extracted text to user_input
+                    else:
+                        st.error("Could not extract text from the file. Please upload a valid document.")
+                else:
+                    st.error("No file uploaded. Please upload a document.")
+                    first_two_pages = None
             
             # Create a numeric input for the page count
             #page_count = st.number_input("Page count:", min_value=1, value=1, step=1)
@@ -1141,19 +1170,6 @@ def main():
             #     st.error("Please enter a valid positive integer for the page count.")
             
             # Create a dropdown to select the US State
-            if user_input:
-                first_two_pages = extract_first_two_pages(user_input)
-            elif user_pdf_input:
-                header, footer, body_text = extract_text(user_pdf_input)
-                if body_text: 
-                    combined_text = "\n".join(header) + "\n" + "\n".join(body_text) + "\n" + "\n".join(footer)
-                
-                    first_two_pages = extract_first_two_pages(combined_text)
-                else:
-                    st.error("The uploaded PDF appears to be an image of text and does not contain extractable text.")
-                    first_two_pages = None
-            else:
-                first_two_pages = None  
                       
             if role =="user" :
                 try:
