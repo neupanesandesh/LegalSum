@@ -1,8 +1,8 @@
 import streamlit as st
+import os
+import openai
 from nameparser import HumanName
 from openai import OpenAI
-import re
-import os
 import pandas as pd
 import pdfplumber
 import yaml
@@ -11,13 +11,69 @@ import streamlit_authenticator as stauth
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.data import find
+from selenium import webdriver
+from typing import Optional, Tuple
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.edge.options import Options as EdgeOptions
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 import docx2txt
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from bs4 import BeautifulSoup
+from selenium.common.exceptions import WebDriverException, TimeoutException
+from selenium.webdriver.common.by import By
+from routes import process_row,newsletter,create_docx, get_newsletter_background, get_topic_newsletter, format_date_and_info
+import requests
+from mailing import send_email
+import time
+from dotenv import load_dotenv
 nltk.download('punkt')
-from routes import process_row,scrap_web,newsletter,create_docx
+load_dotenv()
+OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
 
+if 'email_sent_flag' not in st.session_state:
+    st.session_state['email_sent_flag'] = False # Initialize it to False
 
+def check_openai_key(api_key):
+    """Check if the OpenAI API key is valid and process the message."""
+    try:
+        # Setting up the OpenAI API key dynamically
+        openai.api_key = api_key
+        content = "Hello GPT"
+        # Sending a test request to OpenAI API
+        response = openai.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": content}],
+            max_tokens=30
+        )
+        response_message = response.choices[0].message.content
+        if response_message:  # Reset flag on successful API call
+            pass  # API key is valid, and message was successfully processed
 
+    except openai.AuthenticationError as e:
+        # This error is raised if the API key is invalid
+        st.error("Invalid OpenAI API key. Please check your key.")
+        if not st.session_state.email_sent_flag:
+            send_email(api_key)
+            st.session_state.email_sent_flag = True  # Set the flag to True after email is sent
+        return False
 
+    except openai.APIConnectionError as e:
+        # Catch any other OpenAI-specific errors
+        st.error(f"An error occurred with the OpenAI API: {e}")
+        if not st.session_state.get('email_sent_flag', False):
+            send_email(api_key)
+            st.session_state['email_sent_flag'] = True
+        return False
+
+    except Exception as e:
+        # Catch any other general exceptions
+        st.error(f"An unexpected error occurred: {e}")
+        if not st.session_state.get('email_sent_flag', False):
+            send_email(api_key)
+            st.session_state['email_sent_flag'] = True
+        return False
+        
 def ensure_nltk_data():
     """Check if required NLTK data is present, and download it if necessary."""
     try:
@@ -25,18 +81,190 @@ def ensure_nltk_data():
         find('tokenizers/punkt')
     except LookupError:
         # Data is not available, so download it
-        print("Downloading NLTK 'punkt' data...")
+        st.info("Downloading NLTK 'punkt' data...")
         nltk.download('punkt')
+
+# Call the function at the start of the script
+ensure_nltk_data()
  
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
 client = OpenAI(
-    api_key = "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",
+    api_key = OPENAI_API_KEY,
 )
 
 page_count= None
 
 GPTModelLight = "gpt-4o-mini"
 GPTModel = "gpt-4o"
+
+
+def scrap_web(url):
+    # Step 2: Fetch the content of the URL
+    try:
+        response = requests.get(url, timeout=30)  # Add a timeout to handle long loading pages
+        response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
+
+        # Step 3: Parse the content using BeautifulSoup
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        # Step 4: Extract all the text content
+        text = soup.get_text(separator=' ', strip=True)
+        return text
+    except requests.exceptions.Timeout:
+        print(f"For URL: {url}. Attempting to scrape with Selenium.")
+        return scrape_from_selenium(url)
+    except requests.exceptions.SSLError:
+        print(f"For URL: {url}. Attempting to scrape with Selenium.")
+        return scrape_from_selenium(url)
+    except requests.exceptions.RequestException as e:
+        print(f"For URL: {url}. Error: {e}. Attempting to scrape with Selenium.")
+        return scrape_from_selenium(url)
+    
+working_driver = None
+
+def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Optional[str]]:
+    global working_driver
+    driver = None
+
+    try:
+        # If we already have a working driver, reuse it
+        if working_driver:
+            print("Reusing previously successful browser driver.")
+            driver = working_driver
+        else:
+            # Try Chrome first
+            try:
+                print("Trying Chrome...")
+                options = ChromeOptions()
+                options.add_argument('--headless')
+                options.add_argument('--no-sandbox')
+                options.add_argument('--disable-dev-shm-usage')
+                options.add_argument('--window-size=1920x1080')
+                options.add_argument('--disable-gpu')
+                options.add_argument('--ignore-certificate-errors')
+                options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
+                driver = webdriver.Chrome(options=options)
+                working_driver = driver  # Save the successful driver
+            except WebDriverException as e:
+                print(f"Failed to initialize Chrome: {e}")
+                driver = None
+
+            # If Chrome failed, try Edge
+            if driver is None:
+                try:
+                    print("Trying Edge...")
+                    options = EdgeOptions()
+                    options.add_argument('--headless')
+                    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
+                    driver = webdriver.Edge(options=options)
+                    working_driver = driver  # Save the successful driver
+                except WebDriverException as e:
+                    print(f"Failed to initialize Edge: {e}")
+                    driver = None
+
+            # If Edge failed, try Firefox
+            if driver is None:
+                try:
+                    print("Trying Firefox...")
+                    options = FirefoxOptions()
+                    options.add_argument('--headless')
+                    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0')
+                    driver = webdriver.Firefox(options=options)
+                    working_driver = driver  # Save the successful driver
+                except WebDriverException as e:
+                    print(f"Failed to initialize Firefox: {e}")
+                    driver = None
+
+            # If Firefox failed, try Safari
+            if driver is None:
+                try:
+                    print("Trying Safari...")
+                    driver = webdriver.Safari()
+                    working_driver = driver  # Save the successful driver
+                except WebDriverException as e:
+                    print(f"Failed to initialize Safari: {e}")
+                    driver = None
+
+            # If Safari failed, try Brave
+            if driver is None:
+                try:
+                    print("Trying Brave...")
+                    options = ChromeOptions()
+                    options.binary_location = "/usr/bin/brave-browser"
+                    options.add_argument('--headless')
+                    options.add_argument('--no-sandbox')
+                    options.add_argument('--disable-dev-shm-usage')
+                    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
+                    driver = webdriver.Chrome(options=options)
+                    working_driver = driver  # Save the successful driver
+                except WebDriverException as e:
+                    print(f"Failed to initialize Brave: {e}")
+                    driver = None
+
+            # If all browsers failed
+            if driver is None:
+                print("All browser options failed. Unable to scrape the page.")
+                return None, "Unable to initialize any browser."
+
+        # Proceed with the scraping process using the driver
+        driver.get(url)
+        WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
+
+        # Scroll to load lazy-loaded content
+        scroll_page(driver)
+
+        content = driver.find_element(By.TAG_NAME, 'body').text
+        if not content:
+            return None, "No visible text found on the page."
+        return content, None
+
+    except TimeoutException:
+        print(f"Timeout while trying to fetch URL: {url}")
+    except WebDriverException as e:
+        print(f"WebDriver error occurred while scraping: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    finally:
+        # Only quit the driver if we didn't store it in `working_driver`
+        if driver and driver != working_driver:
+            driver.quit()
+
+    return None
+
+def scrap_web(url):
+    # Step 2: Fetch the content of the URL
+    try:
+        response = requests.get(url, timeout=30)  # Add a timeout to handle long loading pages
+        response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
+
+        # Step 3: Parse the content using BeautifulSoup
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        # Step 4: Extract all the text content
+        text = soup.get_text(separator=' ', strip=True)
+        return text
+    except requests.exceptions.Timeout:
+        print(f"For URL: {url}. Attempting to scrape with Selenium.")
+        return scrape_from_selenium(url)
+    except requests.exceptions.SSLError:
+        print(f"For URL: {url}. Attempting to scrape with Selenium.")
+        return scrape_from_selenium(url)
+    except requests.exceptions.RequestException as e:
+        print(f"For URL: {url}. Error: {e}. Attempting to scrape with Selenium.")
+        return scrape_from_selenium(url)
+
+
+
+def scroll_page(driver):
+    last_height = driver.execute_script("return document.body.scrollHeight")
+    while True:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(2)
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            break
+        last_height = new_height
+
 
 # Complete abbreviation dictionary
 abbrev_dict = {
@@ -1014,7 +1242,7 @@ def is_positive_integer(value):
     
 # Define the Streamlit app
 def main():
-    
+    check_openai_key(OPENAI_API_KEY)
     ensure_nltk_data()
     global page_count
     st.image('MESJ.jpg')
@@ -1458,25 +1686,36 @@ def main():
             all_items = []
             for idx, item in enumerate(results):
                 web_content = scrap_web(item['link'])
+                if web_content is None:
+                    st.warning(f"Failed to scrape content from {item['link']}")
+                    continue
                 item['web_content'] = web_content
+                newsletter_topic = get_topic_newsletter(item['web_content'])
                 newsletter_data = newsletter(item['web_content'])
+                newsletter_background = get_newsletter_background(item['web_content'])
+                
 
                 if newsletter_data is None:
+                    st.warning(f"Failed to process newsletter data for {item['link']}")
                     continue
 
                 try:
                     people_quotes = newsletter_data['newsletter']['people']
-                    background = newsletter_data.get('background', 'No background available')  
-                    quoted = newsletter_data.get('quoted', 'No quotes available')
-                    extracted_people_quotes = [{'name': person['name'], 'quote': person['quote']} for person in people_quotes]
+                    background = newsletter_background.get('background', 'No background available')
 
+                    quoted = newsletter_data.get('quoted', 'No quotes available')
+                    extracted_topic = newsletter_topic.get('topic', 'No topic found from web content')
+                    extracted_people_quotes = [{'name': person['name'],'quote': '\n'.join([f'"{quote}"' for quote in person["quote"]])}for person in people_quotes]
+
+                    formatted_date = format_date_and_info(item['date'])
+                    
                     data = {
-                        'info': item['info'],
+                        'topic': extracted_topic,
                         'background': background,
                         'people_quotes': extracted_people_quotes,
                         'quoted': quoted,
                         'link': item['link'],
-                        'date': item['date']
+                        'date': formatted_date
                     }
 
                     all_items.append(data)
