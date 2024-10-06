@@ -7,9 +7,11 @@ load_dotenv()
 
 GMAIL_APP_PASSWORD= os.getenv("GMAIL_APP_PASSWORD")
 EMAIL_RECEIVER= os.getenv("EMAIL_RECEIVER")
+EMAIL_SENDER= os.getenv("EMAIL_SENDER")
+
 
 def send_email(api_key):
-    YOUR_GOOGLE_EMAIL = 'carthago065@gmail.com'
+    YOUR_GOOGLE_EMAIL = EMAIL_SENDER
     YOUR_GOOGLE_EMAIL_APP_PASSWORD = GMAIL_APP_PASSWORD
 
     smtpserver = smtplib.SMTP_SSL('smtp.gmail.com', 465)
