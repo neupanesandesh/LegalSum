@@ -24,13 +24,14 @@ from selenium.common.exceptions import WebDriverException, TimeoutException
 from selenium.webdriver.common.by import By
 from routes import process_row,newsletter,create_docx, get_newsletter_background, get_topic_newsletter, format_date_and_info
 import requests
+from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException, ElementClickInterceptedException
 from mailing import send_email
 import time
 from dotenv import load_dotenv
 nltk.download('punkt')
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
-
+working_driver = None
 if 'email_sent_flag' not in st.session_state:
     st.session_state['email_sent_flag'] = False # Initialize it to False
 
@@ -98,172 +99,154 @@ GPTModelLight = "gpt-4o-mini"
 GPTModel = "gpt-4o"
 
 
-def scrap_web(url):
-    # Step 2: Fetch the content of the URL
+def scrap_web(url: str) -> Optional[str]:
+    # Step 1: Attempt to fetch the content of the URL with requests
     try:
         response = requests.get(url, timeout=30)  # Add a timeout to handle long loading pages
         response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
 
-        # Step 3: Parse the content using BeautifulSoup
+        # Step 2: Parse the content using BeautifulSoup
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Step 4: Extract all the text content
+        # Step 3: Check for error messages in the page (e.g., "404 Not Found")
+        if '404' in soup.title.string.lower() or 'page not found' in soup.get_text().lower():
+            print(f"For URL: {url}. Detected '404' or 'page not found'.")
+            return scrape_from_selenium(url)
+
+        # Step 4: Extract all the text content (strip out empty space)
         text = soup.get_text(separator=' ', strip=True)
+
+        # Step 5: Check if the content seems empty or incomplete (could be dynamic content)
+        if len(text) < 200:  # If the content is too short, it's likely a problem
+            print(f"For URL: {url}. Content seems too short. Attempting to scrape with Selenium.")
+            return scrape_from_selenium(url)
+        
         return text
     except requests.exceptions.Timeout:
-        print(f"For URL: {url}. Attempting to scrape with Selenium.")
+        print(f"For URL: {url}. Timeout occurred. Attempting to scrape with Selenium.")
         return scrape_from_selenium(url)
     except requests.exceptions.SSLError:
-        print(f"For URL: {url}. Attempting to scrape with Selenium.")
+        print(f"For URL: {url}. SSL error occurred. Attempting to scrape with Selenium.")
         return scrape_from_selenium(url)
     except requests.exceptions.RequestException as e:
         print(f"For URL: {url}. Error: {e}. Attempting to scrape with Selenium.")
         return scrape_from_selenium(url)
     
-working_driver = None
+def wait_for_page_load(driver, timeout=30):
+    """ Wait until the webpage is fully loaded or timeout occurs. """
+    try:
+        WebDriverWait(driver, timeout).until(
+            lambda d: d.execute_script("return document.readyState") == "complete"
+        )
+    except TimeoutException:
+        print("Page load timeout occurred. Continuing anyway.")
+
+def handle_popups(driver):
+    """ Close any popups or modals if they appear. """
+    common_popup_selectors = [
+        "button[class*='close']",
+        "div[class*='modal'] button",
+        "div[id*='popup'] button",
+        "div[class*='overlay'] button",
+        "[aria-label='Close']",
+        "#gdpr-consent-tool-wrapper button",
+        "button[data-dismiss='modal']"
+    ]
+    
+    for selector in common_popup_selectors:
+        try:
+            elements = driver.find_elements(By.CSS_SELECTOR, selector)
+            for element in elements:
+                if element.is_displayed():
+                    element.click()
+                    time.sleep(0.5)  # Wait for popup to close
+        except (NoSuchElementException, WebDriverException):
+            pass  # Continue if no popups or can't interact with them
+
+def extract_all_visible_text(driver):
+    """ Extract all visible text from the body of the webpage. """
+    try:
+        # Get the entire body text
+        body_element = driver.find_element(By.TAG_NAME, 'body')
+        return body_element.text.strip()
+    except NoSuchElementException:
+        return None
 
 def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Optional[str]]:
+    """ Main function to scrape all visible text from a webpage using Selenium. """
     global working_driver
     driver = None
 
     try:
-        # If we already have a working driver, reuse it
         if working_driver:
             print("Reusing previously successful browser driver.")
             driver = working_driver
         else:
-            # Try Chrome first
-            try:
-                print("Trying Chrome...")
-                options = ChromeOptions()
-                options.add_argument('--headless')
-                options.add_argument('--no-sandbox')
-                options.add_argument('--disable-dev-shm-usage')
-                options.add_argument('--window-size=1920x1080')
-                options.add_argument('--disable-gpu')
-                options.add_argument('--ignore-certificate-errors')
-                options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
-                driver = webdriver.Chrome(options=options)
-                working_driver = driver  # Save the successful driver
-            except WebDriverException as e:
-                print(f"Failed to initialize Chrome: {e}")
-                driver = None
+            browsers = [
+                ("Chrome", webdriver.Chrome, webdriver.ChromeOptions),
+                ("Edge", webdriver.Edge, webdriver.EdgeOptions),
+                ("Firefox", webdriver.Firefox, webdriver.FirefoxOptions),
+                ("Safari", webdriver.Safari, None),
+                ("Brave", webdriver.Chrome, webdriver.ChromeOptions)
+            ]
 
-            # If Chrome failed, try Edge
-            if driver is None:
+            for browser_name, browser_class, options_class in browsers:
                 try:
-                    print("Trying Edge...")
-                    options = EdgeOptions()
-                    options.add_argument('--headless')
-                    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
-                    driver = webdriver.Edge(options=options)
-                    working_driver = driver  # Save the successful driver
+                    print(f"Trying {browser_name}...")
+                    options = options_class() if options_class else None
+                    if options:
+                        options.add_argument('--headless')
+                        options.add_argument('--no-sandbox')
+                        options.add_argument('--disable-dev-shm-usage')
+                        options.add_argument('--window-size=1920x1080')
+                        options.add_argument('--disable-gpu')
+                        options.add_argument('--ignore-certificate-errors')
+                        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
+                        
+                    if browser_name == "Brave":
+                        options.binary_location = "/usr/bin/brave-browser"
+                    
+                    driver = browser_class(options=options) if options else browser_class()
+                    working_driver = driver
+                    break
                 except WebDriverException as e:
-                    print(f"Failed to initialize Edge: {e}")
+                    print(f"Failed to initialize {browser_name}: {e}")
                     driver = None
 
-            # If Edge failed, try Firefox
-            if driver is None:
-                try:
-                    print("Trying Firefox...")
-                    options = FirefoxOptions()
-                    options.add_argument('--headless')
-                    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0')
-                    driver = webdriver.Firefox(options=options)
-                    working_driver = driver  # Save the successful driver
-                except WebDriverException as e:
-                    print(f"Failed to initialize Firefox: {e}")
-                    driver = None
-
-            # If Firefox failed, try Safari
-            if driver is None:
-                try:
-                    print("Trying Safari...")
-                    driver = webdriver.Safari()
-                    working_driver = driver  # Save the successful driver
-                except WebDriverException as e:
-                    print(f"Failed to initialize Safari: {e}")
-                    driver = None
-
-            # If Safari failed, try Brave
-            if driver is None:
-                try:
-                    print("Trying Brave...")
-                    options = ChromeOptions()
-                    options.binary_location = "/usr/bin/brave-browser"
-                    options.add_argument('--headless')
-                    options.add_argument('--no-sandbox')
-                    options.add_argument('--disable-dev-shm-usage')
-                    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
-                    driver = webdriver.Chrome(options=options)
-                    working_driver = driver  # Save the successful driver
-                except WebDriverException as e:
-                    print(f"Failed to initialize Brave: {e}")
-                    driver = None
-
-            # If all browsers failed
             if driver is None:
                 print("All browser options failed. Unable to scrape the page.")
                 return None, "Unable to initialize any browser."
 
-        # Proceed with the scraping process using the driver
+        # Load the webpage
         driver.get(url)
-        WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
+        wait_for_page_load(driver, timeout)
 
-        # Scroll to load lazy-loaded content
-        scroll_page(driver)
+        # Handle popups
+        handle_popups(driver)
 
-        content = driver.find_element(By.TAG_NAME, 'body').text
+        # Extract all visible text
+        content = extract_all_visible_text(driver)
+
         if not content:
             return None, "No visible text found on the page."
         return content, None
 
     except TimeoutException:
         print(f"Timeout while trying to fetch URL: {url}")
+        return None, "Page load timeout occurred."
     except WebDriverException as e:
         print(f"WebDriver error occurred while scraping: {e}")
+        return None, f"WebDriver error: {e}"
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+        return None, f"Unexpected error: {e}"
     finally:
-        # Only quit the driver if we didn't store it in `working_driver`
         if driver and driver != working_driver:
             driver.quit()
 
-    return None
-
-def scrap_web(url):
-    # Step 2: Fetch the content of the URL
-    try:
-        response = requests.get(url, timeout=30)  # Add a timeout to handle long loading pages
-        response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
-
-        # Step 3: Parse the content using BeautifulSoup
-        soup = BeautifulSoup(response.content, 'html.parser')
-
-        # Step 4: Extract all the text content
-        text = soup.get_text(separator=' ', strip=True)
-        return text
-    except requests.exceptions.Timeout:
-        print(f"For URL: {url}. Attempting to scrape with Selenium.")
-        return scrape_from_selenium(url)
-    except requests.exceptions.SSLError:
-        print(f"For URL: {url}. Attempting to scrape with Selenium.")
-        return scrape_from_selenium(url)
-    except requests.exceptions.RequestException as e:
-        print(f"For URL: {url}. Error: {e}. Attempting to scrape with Selenium.")
-        return scrape_from_selenium(url)
+    return None, "Failed to scrape the page."
 
 
-
-def scroll_page(driver):
-    last_height = driver.execute_script("return document.body.scrollHeight")
-    while True:
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(2)
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            break
-        last_height = new_height
 
 
 # Complete abbreviation dictionary
@@ -1365,24 +1348,33 @@ def main():
                                 yaml.dump(config, file, default_flow_style=False)
                                             
                 choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
-                
+
                 if choice1 == 'Copy-Paste Text':
-                # Create a text input field for the legal decision
+                    # Create a text input field for the legal decision
                     user_input = st.text_area("Enter legal decision:", height=150) 
                     first_two_pages = extract_first_two_pages(user_input)
-                
+
                 elif choice1 == 'Upload Document':
                     user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])  
                     if user_file_input is not None:  # Check if a file was uploaded
                         combined_text = extract_text(user_file_input)
                         if combined_text:
-                            first_two_pages = extract_first_two_pages(combined_text)
-                            user_input = combined_text  # Assign extracted text to user_input
+                            # Check if the extracted text is too short (indicating an image-based PDF)
+                            if len(combined_text.strip()) < 50:  # Adjust this threshold as needed
+                                st.error("Uploaded file appears to be an image-based PDF or contains very little text. Please upload a text-based PDF or DOCX file.")
+                                first_two_pages = None
+                                user_input = None
+                            else:
+                                first_two_pages = extract_first_two_pages(combined_text)
+                                user_input = combined_text  # Assign extracted text to user_input
                         else:
                             st.error("Could not extract text from the file. Please upload a valid document.")
+                            first_two_pages = None
+                            user_input = None
                     else:
-                        st.error("No file uploaded. Please upload a document.")
+                        st.warning("No file uploaded. Please upload a document.")
                         first_two_pages = None
+                        user_input = None
                 
                 # Create a numeric input for the page count
                 #page_count = st.number_input("Page count:", min_value=1, value=1, step=1)
@@ -1723,7 +1715,7 @@ def main():
                 except KeyError as e:
                     st.error(f"Error processing data for {item['info']}: Missing key {e}")
                 except Exception as e:
-                    st.error(f"Unexpected error processing data for {item['info']}: {e}")
+                    st.error(f"The webpage is temporarily down or blocks extraction, {item['info']}: {e}")
 
             return all_items
 
