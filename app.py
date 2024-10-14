@@ -1713,9 +1713,9 @@ def main():
                     all_items.append(data)
 
                 except KeyError as e:
-                    st.error(f"Error processing data for {item['info']}: Missing key {e}")
+                    print(f"Error processing data for {item['info']}: Missing key {e}")
                 except Exception as e:
-                    st.error(f"The webpage is temporarily down or blocks extraction, {item['info']}: {e}")
+                    print(f"The webpage is temporarily down or blocks extraction, {item['info']}: {e}")
 
             return all_items
 
