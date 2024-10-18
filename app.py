@@ -109,9 +109,13 @@ def scrap_web(url: str) -> Optional[str]:
         soup = BeautifulSoup(response.content, 'html.parser')
 
         # Step 3: Check for error messages in the page (e.g., "404 Not Found")
-        if '404' in soup.title.string.lower() or 'page not found' in soup.get_text().lower():
-            print(f"For URL: {url}. Detected '404' or 'page not found'.")
-            return scrape_from_selenium(url)
+        if soup.title and soup.title.string:
+            if '404' in soup.title.string.lower() or 'page not found' in soup.get_text().lower():
+                print(f"For URL: {url}. Detected '404' or 'page not found'.")
+                return scrape_from_selenium(url)
+        else:
+            # If there is no title or it doesn't have a string, we proceed with scraping
+            print(f"For URL: {url}. No valid title found.")
 
         # Step 4: Extract all the text content (strip out empty space)
         text = soup.get_text(separator=' ', strip=True)
