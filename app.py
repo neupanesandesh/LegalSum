@@ -1729,15 +1729,14 @@ def main():
         # Uploading the file
         uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
 
-        # Reset the session state if a new file is uploaded
-        if uploaded_file is not None:
-            st.session_state['processed_data'] = None  # Reset the session state when a new file is uploaded
+        # Check if we already have the processed data in session state
+        if 'processed_data' not in st.session_state:
+            st.session_state['processed_data'] = None
 
         # If a file is uploaded and not already processed
-        if 'processed_data' not in st.session_state or st.session_state['processed_data'] is None:
-            if uploaded_file is not None:
-                with st.spinner("Processing..."):
-                    st.session_state['processed_data'] = process_data(uploaded_file)
+        if uploaded_file is not None and st.session_state['processed_data'] is None:
+            with st.spinner("Processing..."):
+                st.session_state['processed_data'] = process_data(uploaded_file)
 
         # If the data is processed
         if st.session_state['processed_data']:
