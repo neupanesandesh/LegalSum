@@ -709,11 +709,14 @@ def text_summarizer_alternate(value):
     3. The legal arguments presented (2 - 4 sentences )
     4. The trial court''s findings  (2 - 4 sentences)
     5. The  court''s decision (2 - 4 sentences)
+
+    Guidelines :
     The summary effectively captures the essence of the decision, highlighting the key legal findings and the rationale for the court''s ruling. It is structured to provide a clear and quick understanding of the outcome and the reasons behind it, which is useful for legal professionals interested into the case.
     The summary needs to be without the titles of the sections , in one block of text. Also you can use roles like : plaintiff, defendant etc... when needed.
     If there is only one plaintiff, defendant or petitioner, then use "defendant" or "plaintiff" or "petitioner" instead of the name.
     
-    Also don''t use formulas like : in this case, judgment or things like "In the case before the United States district court for the District of New Jersey" because we already have that information ahead
+    Also don''t use formulas like : in this case, judgment.
+    Don''t use formulas like "In the United States district court for the District of New Jersey", skip it or use "Court."
     Do not need to repeat the name of the case.
     Use "court", instead of "the court", it can be also "family court" etc.., instead of "the family court", basically remove "the" when it is the court or similar.
     Answer in a professional way, don''t invent, stick to the facts.
