@@ -251,7 +251,19 @@ def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Op
 
     return None, "Failed to scrape the page."
 
+def is_image_based_pdf(pdf_file):
+    with pdfplumber.open(pdf_file) as pdf:
+        total_text = ""
+        for page in pdf.pages:
+            text = page.extract_text()
+            header_text = page.extract_text(x_tolerance=2, y_tolerance=2, layout=True)
+            header_text = header_text.split('\n')[0] if header_text else ""
+            total_text += header_text + (text if text else "")
 
+            # If we find enough text, we consider it not image-based
+            if len(total_text.strip()) > 50:
+                return False
+    return True
 
 
 # Complete abbreviation dictionary
@@ -637,16 +649,22 @@ def extract_text_from_pdf(pdf_file):
     all_text = ""
     with pdfplumber.open(pdf_file) as pdf:
         for page_num, page in enumerate(pdf.pages):
+            # Extract header text
+            header_text = page.extract_text(x_tolerance=2, y_tolerance=2, layout=True)
+            header_text = header_text.split('\n')[0] if header_text else ""
+            
+            # Extract main page text
             page_text = page.extract_text()
-            header_text = page.extract_text(x_tolerance=2, y_tolerance=2, layout=True).split('\n')[0] if page_text else ""
+            
+            # Check for image-based content by ensuring the presence of text
+            if not page_text and page.images:
+                page_text = "[Image-based content detected]"
             
             if page_num == 0:
-                all_text += f"Header: {header_text.strip()}{page_text.strip()}\n\n"
-
+                all_text += f"Header: {header_text.strip()} {page_text.strip() if page_text else ''}\n\n"
             else:
-                all_text += f"Header: {header_text.strip()}{page_text.strip()}\n\n"
+                all_text += f"Header: {header_text.strip()} {page_text.strip() if page_text else ''}\n\n"
 
-    
     return all_text.strip()
 
 
@@ -1362,64 +1380,31 @@ def main():
                     user_input = st.text_area("Enter legal decision:", height=150) 
                     first_two_pages = extract_first_two_pages(user_input)
 
+
+
+
                 elif choice1 == 'Upload Document':
                     user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
-                    
+
                     if user_file_input is not None:  # Check if a file was uploaded
-                        # Check if it's a PDF file
-                        if user_file_input.name.lower().endswith('.pdf'):
-                            try:
-                                # Import PyPDF2 for better PDF analysis                                
-                                reader = PdfReader(user_file_input)
-                                has_extractable_text = False
-                                
-                                # Check first few pages for extractable text
-                                for page_num in range(min(3, len(reader.pages))):
-                                    page = reader.pages[page_num]
-                                    text = page.extract_text()
-                                    if text.strip():
-                                        has_extractable_text = True
-                                        break
-                                
-                                if not has_extractable_text:
-                                    st.error("This appears to be a scanned PDF or image-based PDF without extractable text. Please upload a text-based PDF or convert the document using OCR software.")
-                                    first_two_pages = None
-                                    user_input = None
-                                    return
-                                
-                                # If we have extractable text, proceed with normal processing
-                                combined_text = extract_text(user_file_input)
-                                if combined_text:
-                                    if len(combined_text.strip()) < 50:
-                                        st.error("The extracted text is too short. Please ensure the PDF contains sufficient text content.")
-                                        first_two_pages = None
-                                        user_input = None
-                                    else:
-                                        first_two_pages = extract_first_two_pages(combined_text)
-                                        user_input = combined_text
-                                else:
-                                    st.error("Could not extract text from the file. Please upload a valid document.")
-                                    first_two_pages = None
-                                    user_input = None
-                                    
-                            except Exception as e:
-                                st.error(f"Error processing PDF: Please ensure the file is not corrupted or password-protected.")
-                                first_two_pages = None
-                                user_input = None
-                        
-                        # For DOCX files, use the existing logic
+                        # Check if the PDF is image-based
+                        if is_image_based_pdf(user_file_input):
+                            st.error("Uploaded file appears to be an image-based PDF or contains very little text. Please upload a text-based PDF or DOCX file.")
+                            first_two_pages = None
+                            user_input = None
                         else:
-                            combined_text = extract_text(user_file_input)
+                            combined_text = extract_text_from_pdf(user_file_input)
                             if combined_text:
+                                # Check if the extracted text is too short
                                 if len(combined_text.strip()) < 50:
-                                    st.error("The document contains very little text. Please check the content.")
+                                    st.error("Uploaded file contains very little text. Please upload a text-based PDF or DOCX file.")
                                     first_two_pages = None
                                     user_input = None
                                 else:
                                     first_two_pages = extract_first_two_pages(combined_text)
-                                    user_input = combined_text
+                                    user_input = combined_text  # Assign extracted text to user_input
                             else:
-                                st.error("Could not extract text from the file. Please upload a valid document.")
+                                st.error("Could not extract text from the file.It doesnot contains Extractable text. Please upload a valid document.")
                                 first_two_pages = None
                                 user_input = None
                     else:
