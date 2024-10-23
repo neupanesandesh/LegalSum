@@ -27,6 +27,7 @@ import requests
 from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException, ElementClickInterceptedException
 from mailing import send_email
 import time
+from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 nltk.download('punkt')
 load_dotenv()
@@ -1236,124 +1237,124 @@ def main():
     ensure_nltk_data()
     global page_count
     st.image('MESJ.jpg')
-    app_mode = st.sidebar.selectbox("Choose your preference:", ["Legal Decision Summarizer", "Newsletter Quotes"])
-    if app_mode == "Legal Decision Summarizer":
-        st.title("Legal Decision Summarizer")
 
-        with open('config.YAML') as file:
-            config = yaml.load(file, Loader=SafeLoader)
-        with open('cfg1.YAML') as file:
-            roles_config = yaml.load(file, Loader=SafeLoader)
+    with open('config.YAML') as file:
+        config = yaml.load(file, Loader=SafeLoader)
+    with open('cfg1.YAML') as file:
+        roles_config = yaml.load(file, Loader=SafeLoader)
 
-        if 'pre-authorized' in config.keys():
-            authenticator = stauth.Authenticate(
-            config['credentials'],
-            config['cookie']['name'],
-            config['cookie']['key'],
-            config['cookie']['expiry_days'],
+    if 'pre-authorized' in config.keys():
+        authenticator = stauth.Authenticate(
+        config['credentials'],
+        config['cookie']['name'],
+        config['cookie']['key'],
+        config['cookie']['expiry_days'],
+        
+        config['pre-authorized']
+    )
+        if 'authentication_status' not in st.session_state:
+            st.session_state.authentication_status = None
+        name, authentication_status, username = authenticator.login()
+        if username : 
+            role = roles_config["usernames"][username]["role"]
             
-            config['pre-authorized']
-        )
-            if 'authentication_status' not in st.session_state:
-                st.session_state.authentication_status = None
-            name, authentication_status, username = authenticator.login()
-            if username : 
-                role = roles_config["usernames"][username]["role"]
-                
-            else : role = "user"
+        else : role = "user"
 
-            if authentication_status == False:
-                st.error("Username/password is incorrect")
+        if authentication_status == False:
+            st.error("Username/password is incorrect")
 
-            if authentication_status == None:
-                st.warning("Please enter your username and password")
+        if authentication_status == None:
+            st.warning("Please enter your username and password")
 
-            if authentication_status:
-                authenticator.logout("Logout", "sidebar")
-                st.sidebar.title(f"Welcome {name}")
-                # Create a text input field for the legal decision
+        if authentication_status:
+            authenticator.logout("Logout", "sidebar")
+            st.sidebar.title(f"Welcome {name}")
+            
+            app_mode = st.sidebar.selectbox("Choose your preference:", ["Legal Decision Summarizer", "Newsletter Quotes"])
 
-                selected_option = st.sidebar.selectbox("Options", setOptions(role))
+            selected_option = st.sidebar.selectbox("Options", setOptions(role))
 
-                with st.expander(f"{selected_option}"):
+            with st.expander(f"{selected_option}"):
 
-            # Perform actions based on the selected option
-                    if selected_option == "Reset Password":
-                        if st.session_state["authentication_status"]:
-                            try:
-                                if authenticator.reset_password(st.session_state["username"]):
-                                    st.success('Password modified successfully')
-                            except Exception as e:
-                                st.error(e)
-                            with open('config.YAML', 'w') as file:
-                                yaml.dump(config, file, default_flow_style=False)
-                    elif selected_option == "Add User":
+        # Perform actions based on the selected option
+                if selected_option == "Reset Password":
+                    if st.session_state["authentication_status"]:
                         try:
-                            email_of_registered_user, username_of_registered_user, name_of_registered_user = authenticator.register_user(
-                                fields={
-                                    'Form name':'Register user', 
-                                    'Email':'Email', 
-                                    'Username':'Username', 
-                                    'Password':'Password', 
-                                    'Repeat password':'Repeat password',
-                                    'Register':'Register'},
-                                pre_authorization=False)
-                            if username_of_registered_user : 
-                                st.session_state["username_of_registered_user"] = username_of_registered_user
-                            if email_of_registered_user:
-                                    
-                                with open('config.YAML', 'w') as file:
-                                    yaml.dump(config, file, default_flow_style=False)
-                                st.success('User registered successfully')
-                            if "username_of_registered_user" in st.session_state.keys() and st.session_state["username_of_registered_user"]:
-                                role='admin'
-                                role = st.selectbox("select a role", options=["admin", "user"])
-                                if role =='user':
-                                    chosen_states = st.multiselect ("select the states" , options = ["New Jersey", "Texas", "Connecticut"])
-                                    if role and chosen_states:
-                                        with open('cfg1.YAML', 'r') as file:
-                                            role_data = yaml.safe_load(file)
-                                            if st.session_state["username_of_registered_user"] not in role_data['usernames'].keys() or role_data["usernames"][st.session_state["username_of_registered_user"]]==None :
-                                                role_data["usernames"][st.session_state["username_of_registered_user"]]= dict()
-                                            role_data["usernames"][st.session_state["username_of_registered_user"]]["role"] = role
-                                            role_data["usernames"][st.session_state["username_of_registered_user"]]["states"] = chosen_states
-                                        with open('cfg1.YAML', 'w') as file:
-                                            yaml.dump(role_data, file)
-                                            file.close()
-                                
+                            if authenticator.reset_password(st.session_state["username"]):
+                                st.success('Password modified successfully')
                         except Exception as e:
                             st.error(e)
                         with open('config.YAML', 'w') as file:
-                                yaml.dump(config, file, default_flow_style=False)
-                        
-                    elif selected_option == "Update":
-                        if st.session_state["authentication_status"]:   
-                            try:
-                                with open('config.YAML', 'r') as file:
-                                        usernames_data = yaml.safe_load(file)["credentials"]["usernames"]
-                                        usernames_= usernames_data.keys()
-                                username_updated= st.selectbox('username',usernames_)
-                                if username_updated : 
-                                    st.session_state["username_updated"] = username_updated
-                                if authenticator.update_user_details(username_updated):
-                                    st.success('Entries updated successfully')
-                                with open('cfg1.YAML', 'r') as file:
-                                    role_data = yaml.safe_load(file)
-                                if "username_updated" in st.session_state.keys() and st.session_state["username_updated"] and role_data["usernames"][st.session_state["username_updated"]]['role']== 'user':                            
-                                        chosen_states = st.multiselect ("select the states" , options = ["New Jersey", "Texas", "Connecticut"])
-                                        if chosen_states:
-                                            
-                                            if st.session_state["username_updated"] not in role_data['usernames'].keys() or role_data["usernames"][st.session_state["username_updated"]]==None :
-                                                role_data["usernames"][st.session_state["username_updated"]]= dict()
-                                            role_data["usernames"][st.session_state["username_updated"]]["states"] = chosen_states
-                                            with open('cfg1.YAML', 'w') as file:
-                                                yaml.dump(role_data, file)
-                                                file.close()
-                            except Exception as e:
-                                st.error(e)
+                            yaml.dump(config, file, default_flow_style=False)
+                elif selected_option == "Add User":
+                    try:
+                        email_of_registered_user, username_of_registered_user, name_of_registered_user = authenticator.register_user(
+                            fields={
+                                'Form name':'Register user', 
+                                'Email':'Email', 
+                                'Username':'Username', 
+                                'Password':'Password', 
+                                'Repeat password':'Repeat password',
+                                'Register':'Register'},
+                            pre_authorization=False)
+                        if username_of_registered_user : 
+                            st.session_state["username_of_registered_user"] = username_of_registered_user
+                        if email_of_registered_user:
+                                
                             with open('config.YAML', 'w') as file:
                                 yaml.dump(config, file, default_flow_style=False)
-                                            
+                            st.success('User registered successfully')
+                        if "username_of_registered_user" in st.session_state.keys() and st.session_state["username_of_registered_user"]:
+                            role='admin'
+                            role = st.selectbox("select a role", options=["admin", "user"])
+                            if role =='user':
+                                chosen_states = st.multiselect ("select the states" , options = ["New Jersey", "Texas", "Connecticut"])
+                                if role and chosen_states:
+                                    with open('cfg1.YAML', 'r') as file:
+                                        role_data = yaml.safe_load(file)
+                                        if st.session_state["username_of_registered_user"] not in role_data['usernames'].keys() or role_data["usernames"][st.session_state["username_of_registered_user"]]==None :
+                                            role_data["usernames"][st.session_state["username_of_registered_user"]]= dict()
+                                        role_data["usernames"][st.session_state["username_of_registered_user"]]["role"] = role
+                                        role_data["usernames"][st.session_state["username_of_registered_user"]]["states"] = chosen_states
+                                    with open('cfg1.YAML', 'w') as file:
+                                        yaml.dump(role_data, file)
+                                        file.close()
+                            
+                    except Exception as e:
+                        st.error(e)
+                    with open('config.YAML', 'w') as file:
+                            yaml.dump(config, file, default_flow_style=False)
+                    
+                elif selected_option == "Update":
+                    if st.session_state["authentication_status"]:   
+                        try:
+                            with open('config.YAML', 'r') as file:
+                                    usernames_data = yaml.safe_load(file)["credentials"]["usernames"]
+                                    usernames_= usernames_data.keys()
+                            username_updated= st.selectbox('username',usernames_)
+                            if username_updated : 
+                                st.session_state["username_updated"] = username_updated
+                            if authenticator.update_user_details(username_updated):
+                                st.success('Entries updated successfully')
+                            with open('cfg1.YAML', 'r') as file:
+                                role_data = yaml.safe_load(file)
+                            if "username_updated" in st.session_state.keys() and st.session_state["username_updated"] and role_data["usernames"][st.session_state["username_updated"]]['role']== 'user':                            
+                                    chosen_states = st.multiselect ("select the states" , options = ["New Jersey", "Texas", "Connecticut"])
+                                    if chosen_states:
+                                        
+                                        if st.session_state["username_updated"] not in role_data['usernames'].keys() or role_data["usernames"][st.session_state["username_updated"]]==None :
+                                            role_data["usernames"][st.session_state["username_updated"]]= dict()
+                                        role_data["usernames"][st.session_state["username_updated"]]["states"] = chosen_states
+                                        with open('cfg1.YAML', 'w') as file:
+                                            yaml.dump(role_data, file)
+                                            file.close()
+                        except Exception as e:
+                            st.error(e)
+                        with open('config.YAML', 'w') as file:
+                            yaml.dump(config, file, default_flow_style=False)
+                    
+            if app_mode == "Legal Decision Summarizer":
+                st.title("Legal Decision Summarizer")                        
                 choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
 
                 if choice1 == 'Copy-Paste Text':
@@ -1362,22 +1363,65 @@ def main():
                     first_two_pages = extract_first_two_pages(user_input)
 
                 elif choice1 == 'Upload Document':
-                    user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])  
+                    user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
+                    
                     if user_file_input is not None:  # Check if a file was uploaded
-                        combined_text = extract_text(user_file_input)
-                        if combined_text:
-                            # Check if the extracted text is too short (indicating an image-based PDF)
-                            if len(combined_text.strip()) < 50:  # Adjust this threshold as needed
-                                st.error("Uploaded file appears to be an image-based PDF or contains very little text. Please upload a text-based PDF or DOCX file.")
+                        # Check if it's a PDF file
+                        if user_file_input.name.lower().endswith('.pdf'):
+                            try:
+                                # Import PyPDF2 for better PDF analysis                                
+                                reader = PdfReader(user_file_input)
+                                has_extractable_text = False
+                                
+                                # Check first few pages for extractable text
+                                for page_num in range(min(3, len(reader.pages))):
+                                    page = reader.pages[page_num]
+                                    text = page.extract_text()
+                                    if text.strip():
+                                        has_extractable_text = True
+                                        break
+                                
+                                if not has_extractable_text:
+                                    st.error("This appears to be a scanned PDF or image-based PDF without extractable text. Please upload a text-based PDF or convert the document using OCR software.")
+                                    first_two_pages = None
+                                    user_input = None
+                                    return
+                                
+                                # If we have extractable text, proceed with normal processing
+                                combined_text = extract_text(user_file_input)
+                                if combined_text:
+                                    if len(combined_text.strip()) < 50:
+                                        st.error("The extracted text is too short. Please ensure the PDF contains sufficient text content.")
+                                        first_two_pages = None
+                                        user_input = None
+                                    else:
+                                        first_two_pages = extract_first_two_pages(combined_text)
+                                        user_input = combined_text
+                                else:
+                                    st.error("Could not extract text from the file. Please upload a valid document.")
+                                    first_two_pages = None
+                                    user_input = None
+                                    
+                            except Exception as e:
+                                st.error(f"Error processing PDF: Please ensure the file is not corrupted or password-protected.")
                                 first_two_pages = None
                                 user_input = None
-                            else:
-                                first_two_pages = extract_first_two_pages(combined_text)
-                                user_input = combined_text  # Assign extracted text to user_input
+                        
+                        # For DOCX files, use the existing logic
                         else:
-                            st.error("Could not extract text from the file. Please upload a valid document.")
-                            first_two_pages = None
-                            user_input = None
+                            combined_text = extract_text(user_file_input)
+                            if combined_text:
+                                if len(combined_text.strip()) < 50:
+                                    st.error("The document contains very little text. Please check the content.")
+                                    first_two_pages = None
+                                    user_input = None
+                                else:
+                                    first_two_pages = extract_first_two_pages(combined_text)
+                                    user_input = combined_text
+                            else:
+                                st.error("Could not extract text from the file. Please upload a valid document.")
+                                first_two_pages = None
+                                user_input = None
                     else:
                         st.warning("No file uploaded. Please upload a document.")
                         first_two_pages = None
@@ -1675,87 +1719,108 @@ def main():
                         st.write(Texas_summarizer(user_input))
                     else:
                         st.warning("Please select a state before clicking 'Summarize'.")
-                        
-    elif app_mode == "Newsletter Quotes":
-        def process_data(uploaded_file):
-            df = pd.read_excel(uploaded_file, header=None)
-            df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
-            results = list(filter(None, df.apply(process_row, axis=1)))
-
-            all_items = []
-            for idx, item in enumerate(results):
-                web_content = scrap_web(item['link'])
-                if web_content is None:
-                    st.warning(f"Failed to scrape content from {item['link']}")
-                    continue
-                item['web_content'] = web_content
-                newsletter_topic = get_topic_newsletter(item['web_content'])
-                newsletter_data = newsletter(item['web_content'])
-                newsletter_background = get_newsletter_background(item['web_content'])
-                
-
-                if newsletter_data is None:
-                    st.warning(f"Failed to process newsletter data for {item['link']}")
-                    continue
-
-                try:
-                    people_quotes = newsletter_data['newsletter']['people']
-                    background = newsletter_background.get('background', 'No background available')
-
-                    quoted = newsletter_data.get('quoted', 'No quotes available')
-                    extracted_topic = newsletter_topic.get('topic', 'No topic found from web content')
-                    extracted_people_quotes = [{'name': person['name'],'quote': '\n'.join([f'"{quote}"' for quote in person["quote"]])}for person in people_quotes]
-
-                    formatted_date = format_date_and_info(item['date'])
                     
-                    data = {
-                        'topic': extracted_topic,
-                        'background': background,
-                        'people_quotes': extracted_people_quotes,
-                        'quoted': quoted,
-                        'link': item['link'],
-                        'date': formatted_date
-                    }
+            elif app_mode == "Newsletter Quotes":
+                def process_data(uploaded_file):
+                    df = pd.read_excel(uploaded_file, header=None)
+                    df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
+                    results = list(filter(None, df.apply(process_row, axis=1)))
 
-                    all_items.append(data)
+                    all_items = []
+                    for idx, item in enumerate(results):
+                        web_content = scrap_web(item['link'])
+                        if web_content is None:
+                            st.warning(f"Failed to scrape content from {item['link']}")
+                            continue
+                        item['web_content'] = web_content
+                        newsletter_topic = get_topic_newsletter(item['web_content'])
+                        newsletter_data = newsletter(item['web_content'])
+                        newsletter_background = get_newsletter_background(item['web_content'])
+                        
 
-                except KeyError as e:
-                    print(f"Error processing data for {item['info']}: Missing key {e}")
-                except Exception as e:
-                    print(f"The webpage is temporarily down or blocks extraction, {item['info']}: {e}")
+                        if newsletter_data is None:
+                            st.warning(f"Failed to process newsletter data for {item['link']}")
+                            continue
 
-            return all_items
+                        try:
+                            people_quotes = newsletter_data['newsletter']['people']
+                            background = newsletter_background.get('background', 'No background available')
 
-        # Title of the app
-        st.title('Newsletter Quotes')
+                            quoted = newsletter_data.get('quoted', 'No quotes available')
+                            extracted_topic = newsletter_topic.get('topic', 'No topic found from web content')
+                            extracted_people_quotes = [{'name': person['name'],'quote': '\n'.join([f'"{quote}"' for quote in person["quote"]])}for person in people_quotes]
 
-        # Uploading the file
-        uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
+                            formatted_date = format_date_and_info(item['date'])
+                            
+                            data = {
+                                'topic': extracted_topic,
+                                'background': background,
+                                'people_quotes': extracted_people_quotes,
+                                'quoted': quoted,
+                                'link': item['link'],
+                                'date': formatted_date
+                            }
 
-        # Check if we already have the processed data in session state
-        if 'processed_data' not in st.session_state:
-            st.session_state['processed_data'] = None
+                            all_items.append(data)
 
-        # If a file is uploaded and not already processed
-        if uploaded_file is not None and st.session_state['processed_data'] is None:
-            with st.spinner("Processing..."):
-                st.session_state['processed_data'] = process_data(uploaded_file)
+                        except KeyError as e:
+                            print(f"Error processing data for {item['info']}: Missing key {e}")
+                        except Exception as e:
+                            print(f"The webpage is temporarily down or blocks extraction, {item['info']}: {e}")
 
-        # If the data is processed
-        if st.session_state['processed_data']:
-            docx_path = create_docx(st.session_state['processed_data'])
-            with open(docx_path, "rb") as file:
-                docx_data = file.read()
+                    return all_items
 
-            # Display the download button
-            st.download_button(
-                label="Download DOCX File",
-                data=docx_data,
-                file_name="newsletter_output.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-                
+                # Title of the app
+                st.title('Newsletter Quotes')
 
+                # Uploading the file
+                # uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
+
+                # Check if we already have the processed data in session state
+                if 'processed_data' not in st.session_state:
+                    st.session_state['processed_data'] = None
+                    
+                if 'file_uploader_key' not in st.session_state:
+                    st.session_state.file_uploader_key = 0  
+                      
+                if 'downloaded' not in st.session_state:
+                    st.session_state['downloaded'] = False
+                    
+                if st.session_state['processed_data'] is None:
+                    uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx", key=st.session_state.file_uploader_key)
+
+                    # If a file is uploaded and not already processed
+                    if uploaded_file is not None:
+                        with st.spinner("Processing..."):
+                            st.session_state['processed_data'] = process_data(uploaded_file)
+
+                # If the data is processed
+                if st.session_state['processed_data']:
+                    docx_path = create_docx(st.session_state['processed_data'])
+                    with open(docx_path, "rb") as file:
+                        docx_data = file.read()
+
+                    # Only show the download button if the file hasn't been downloaded yet
+                    if not st.session_state['downloaded']:
+                        # Display the download button
+                        if st.download_button(
+                            label="Download DOCX File",
+                            data=docx_data,
+                            file_name="newsletter_output.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        ):
+                            # Once the file is downloaded, set 'downloaded' to True
+                            st.session_state['downloaded'] = True
+                            
+                    process_button_placeholder = st.empty()
+                    
+                    if st.session_state['downloaded']:
+                        if process_button_placeholder.button("Process New File"):
+                            st.session_state['processed_data'] = None
+                            st.session_state['downloaded'] = False  # Reset the download state
+                            st.session_state.file_uploader_key += 1  # Increment the file uploader key to reset the uploader
+                            process_button_placeholder.empty()  # This removes the button after click
+                            st.experimental_rerun() 
 
 if __name__ == "__main__":
     main()
