@@ -261,8 +261,9 @@ def is_image_based_pdf(pdf_file):
             total_text += header_text + (text if text else "")
 
             # If we find enough text, we consider it not image-based
-            if len(total_text.strip()) > 50:
-                return False
+            
+            if len(total_text.count(" ")+1 > 300:
+                return False            
     return True
 
 
@@ -1396,7 +1397,7 @@ def main():
                             combined_text = extract_text_from_pdf(user_file_input)
                             if combined_text:
                                 # Check if the extracted text is too short
-                                if len(combined_text.strip()) < 50:
+                                if len(combined_text.strip()) < 300:
                                     st.error("Uploaded file contains very little text. Please upload a text-based PDF or DOCX file.")
                                     first_two_pages = None
                                     user_input = None
