@@ -254,15 +254,17 @@ def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Op
 def is_image_based_pdf(pdf_file):
     with pdfplumber.open(pdf_file) as pdf:
         total_text = ""
+        page_text = ""
         for page in pdf.pages:
             text = page.extract_text()
             header_text = page.extract_text(x_tolerance=2, y_tolerance=2, layout=True)
             header_text = header_text.split('\n')[0] if header_text else ""
             total_text += header_text + (text if text else "")
+            page_text += (text if text else "")
 
             # If we find enough text, we consider it not image-based
             
-            if total_text.count(" ") > 301:
+            if page_text.count(" ") > 301:
                 return False            
     return True
 
