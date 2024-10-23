@@ -262,7 +262,7 @@ def is_image_based_pdf(pdf_file):
 
             # If we find enough text, we consider it not image-based
             
-            if len(total_text.count(" ") > 301:
+            if len(total_text.count(" ")) > 301:
                 return False            
     return True
 
