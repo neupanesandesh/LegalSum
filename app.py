@@ -1383,37 +1383,50 @@ def main():
                     user_input = st.text_area("Enter legal decision:", height=150) 
                     first_two_pages = extract_first_two_pages(user_input)
 
-
-
-
                 elif choice1 == 'Upload Document':
                     user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
 
                     if user_file_input is not None:  # Check if a file was uploaded
-                        # Check if the PDF is image-based
-                        if is_image_based_pdf(user_file_input):
-                            st.error("Uploaded file appears to be an image-based PDF or contains very little text. Please upload a text-based PDF or DOCX file.")
-                            first_two_pages = None
-                            user_input = None
-                        else:
-                            combined_text = extract_text_from_pdf(user_file_input)
+                        if user_file_input.name.endswith('.pdf'):  # If it's a PDF, check if it's image-based
+                            if is_image_based_pdf(user_file_input):
+                                st.error("Uploaded file appears to be an image-based PDF or contains very little text. Please upload a text-based PDF.")
+                                first_two_pages = None
+                                user_input = None
+                            else:
+                                combined_text = extract_text(user_file_input)
+                                if combined_text:
+                                    if len(combined_text.strip()) < 200:
+                                        st.error("Uploaded PDF contains very little text. Please upload a text-based PDF.")
+                                        first_two_pages = None
+                                        user_input = None
+                                    else:
+                                        first_two_pages = extract_first_two_pages(combined_text)
+                                        user_input = combined_text
+                                else:
+                                    st.error("Could not extract text from the PDF. Please upload a valid PDF.")
+                                    first_two_pages = None
+                                    user_input = None
+
+                        elif user_file_input.name.endswith('.docx'):  # If it's a DOCX, no need to check for image-based
+                            combined_text = extract_text(user_file_input)
                             if combined_text:
-                                # Check if the extracted text is too short
-                                if len(combined_text.strip()) < 300:
-                                    st.error("Uploaded file contains very little text. Please upload a text-based PDF or DOCX file.")
+                                if len(combined_text.strip()) < 200:
+                                    st.error("Uploaded DOCX contains very little text. Please upload a valid DOCX file.")
                                     first_two_pages = None
                                     user_input = None
                                 else:
                                     first_two_pages = extract_first_two_pages(combined_text)
-                                    user_input = combined_text  # Assign extracted text to user_input
+                                    user_input = combined_text
                             else:
-                                st.error("Could not extract text from the file.It doesnot contains Extractable text. Please upload a valid document.")
+                                st.error("Could not extract text from the DOCX file. Please upload a valid DOCX.")
                                 first_two_pages = None
                                 user_input = None
+
                     else:
                         st.warning("No file uploaded. Please upload a document.")
                         first_two_pages = None
                         user_input = None
+                        
                 
                 # Create a numeric input for the page count
                 #page_count = st.number_input("Page count:", min_value=1, value=1, step=1)
