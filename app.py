@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import re
 import openai
 from nameparser import HumanName
 from openai import OpenAI
@@ -100,33 +101,201 @@ GPTModelLight = "gpt-4o-mini"
 GPTModel = "gpt-4o"
 
 
-def scrap_web(url: str) -> Optional[str]:
-    # Step 1: Attempt to fetch the content of the URL with requests
+def is_main_content_container(element, text_length_threshold=100) -> bool:
+    """
+    Determine if an element is likely to be a main content container.
+    """
+    # Common content container class/id keywords
+    content_indicators = {
+        'article', 'content', 'main', 'post', 'story', 'text', 
+        'body', 'entry', 'blog', 'news'
+    }
+    
+    # Check element attributes
+    if element.get('class'):
+        class_text = ' '.join(element.get('class')).lower()
+        if any(indicator in class_text for indicator in content_indicators):
+            return True
+            
+    if element.get('id'):
+        id_text = element.get('id').lower()
+        if any(indicator in id_text for indicator in content_indicators):
+            return True
+    
+    # Check if element contains substantial text
+    text_content = element.get_text(strip=True)
+    if len(text_content) > text_length_threshold:
+        # Check text/html ratio
+        html_length = len(str(element))
+        if html_length > 0:
+            text_ratio = len(text_content) / html_length
+            if text_ratio > 0.5:  # High text-to-HTML ratio indicates content
+                return True
+    
+    return False
+
+def remove_unwanted_elements(soup: BeautifulSoup) -> None:
+    """
+    Remove unwanted elements like ads, navigation, footers, etc.
+    Safely handles None elements and missing attributes.
+    """
+    if not soup:
+        return
+
+    # Elements likely to be non-content
+    unwanted_elements = {
+        'nav', 'header', 'footer', 'sidebar', 'advertisement', 'ad',
+        'social', 'comment', 'menu', 'related', 'share', 'popup',
+        'cookie', 'banner', 'newsletter'
+    }
+    
+    # Remove elements by tag
+    for tag in ['script', 'style', 'noscript', 'iframe', 'aside']:
+        for element in soup.find_all(tag):
+            if element:  # Check if element exists
+                try:
+                    element.decompose()
+                except Exception:
+                    continue
+    
+    # Remove elements by class
     try:
-        response = requests.get(url, timeout=30)  # Add a timeout to handle long loading pages
-        response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
+        for element in soup.find_all(attrs={'class': True}):  # Using attrs instead of class_
+            if element and element.attrs:  # Check if element and its attributes exist
+                try:
+                    classes = element.get('class', [])
+                    if isinstance(classes, (list, tuple)):
+                        class_text = ' '.join(classes).lower()
+                    else:
+                        class_text = str(classes).lower()
+                    
+                    if any(term in class_text for term in unwanted_elements):
+                        element.decompose()
+                except Exception:
+                    continue
+    except Exception:
+        pass
+            
+    # Remove elements by id
+    try:
+        for element in soup.find_all(attrs={'id': True}):  # Using attrs instead of id
+            if element and element.attrs:  # Check if element and its attributes exist
+                try:
+                    id_text = str(element.get('id', '')).lower()
+                    if any(term in id_text for term in unwanted_elements):
+                        element.decompose()
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    
+    # Additional cleanup: Remove empty elements
+    try:
+        for element in soup.find_all():
+            if element and not element.get_text(strip=True):
+                if not element.find_all(['img', 'video', 'audio', 'iframe']):
+                    try:
+                        element.decompose()
+                    except Exception:
+                        continue
+    except Exception:
+        pass
 
-        # Step 2: Parse the content using BeautifulSoup
+def extract_main_content(soup: BeautifulSoup) -> str:
+    """
+    Extract the main content from the webpage.
+    """
+    # First, try to find the main content container
+    main_container = None
+    
+    # Look for semantic HTML5 elements first
+    for tag in ['article', 'main']:
+        main_container = soup.find(tag)
+        if main_container:
+            break
+    
+    # If no semantic elements found, look for largest content container
+    if not main_container:
+        candidates = []
+        for element in soup.find_all(['div', 'section']):
+            if is_main_content_container(element):
+                text_length = len(element.get_text(strip=True))
+                candidates.append((element, text_length))
+        
+        if candidates:
+            # Sort by text length and get the largest
+            main_container = max(candidates, key=lambda x: x[1])[0]
+    
+    # If still no main container found, fall back to body
+    if not main_container:
+        main_container = soup.body if soup.body else soup
+    
+    # Clean up the content
+    text = main_container.get_text(separator=' ', strip=True)
+    
+    # Remove excessive whitespace
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Remove common unwanted patterns
+    text = re.sub(r'(Share|Tweet|Email|Print|Comments)(\s+|$)', '', text)
+    
+    return text.strip()
+
+def handle_lazy_loading(soup: BeautifulSoup) -> None:
+    """
+    Handle lazy-loaded content by extracting data from common attributes.
+    """
+    lazy_attributes = ['data-src', 'data-content', 'data-lazy', 'data-load']
+    
+    for element in soup.find_all(attrs={'class': True}):
+        for attr in lazy_attributes:
+            if element.has_attr(attr):
+                content = element[attr]
+                if content:
+                    element.string = content
+
+def scrap_web(url: str) -> Optional[str]:
+    """
+    Enhanced web scraping function with improved content extraction.
+    """
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'DNT': '1',
+    }
+    
+    try:
+        # Step 1: Attempt to fetch with custom headers and longer timeout
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        # Step 2: Parse with a more lenient parser
         soup = BeautifulSoup(response.content, 'html.parser')
-
-        # Step 3: Check for error messages in the page (e.g., "404 Not Found")
+        
+        # Step 3: Check for error pages
         if soup.title and soup.title.string:
-            if '404' in soup.title.string.lower() or 'page not found' in soup.get_text().lower():
-                print(f"For URL: {url}. Detected '404' or 'page not found'.")
+            error_indicators = ['404', 'page not found', 'error', 'access denied']
+            if any(indicator in soup.title.string.lower() for indicator in error_indicators):
+                print(f"For URL: {url}. Error page detected.")
                 return scrape_from_selenium(url)
-        else:
-            # If there is no title or it doesn't have a string, we proceed with scraping
-            print(f"For URL: {url}. No valid title found.")
-
-        # Step 4: Extract all the text content (strip out empty space)
-        text = soup.get_text(separator=' ', strip=True)
-
-        # Step 5: Check if the content seems empty or incomplete (could be dynamic content)
-        if len(text) < 200:  # If the content is too short, it's likely a problem
-            print(f"For URL: {url}. Content seems too short. Attempting to scrape with Selenium.")
+        
+        # Step 4: Handle lazy-loaded content
+        handle_lazy_loading(soup)
+        
+        # Step 5: Remove unwanted elements
+        remove_unwanted_elements(soup)
+        
+        # Step 6: Extract main content
+        text = extract_main_content(soup)
+        
+        # Step 7: Validate content
+        if len(text) < 200 or not re.search(r'[.!?]', text):  # Check for proper sentences
+            print(f"For URL: {url}. Content seems incomplete. Attempting to scrape with Selenium.")
             return scrape_from_selenium(url)
         
         return text
+        
     except requests.exceptions.Timeout:
         print(f"For URL: {url}. Timeout occurred. Attempting to scrape with Selenium.")
         return scrape_from_selenium(url)
@@ -138,16 +307,24 @@ def scrap_web(url: str) -> Optional[str]:
         return scrape_from_selenium(url)
     
 def wait_for_page_load(driver, timeout=30):
-    """ Wait until the webpage is fully loaded or timeout occurs. """
+    """ Enhanced wait for page load with additional checks """
     try:
         WebDriverWait(driver, timeout).until(
-            lambda d: d.execute_script("return document.readyState") == "complete"
+            lambda d: d.execute_script("""
+                return (
+                    document.readyState === 'complete' && 
+                    !document.querySelector('.loading') &&
+                    !document.querySelector('[data-loading="true"]') &&
+                    (!window.jQuery || jQuery.active === 0) &&
+                    !document.querySelector('img[loading="lazy"]:not([src])')
+                )
+            """)
         )
     except TimeoutException:
         print("Page load timeout occurred. Continuing anyway.")
 
 def handle_popups(driver):
-    """ Close any popups or modals if they appear. """
+    """ Enhanced popup handling with more patterns """
     common_popup_selectors = [
         "button[class*='close']",
         "div[class*='modal'] button",
@@ -155,27 +332,282 @@ def handle_popups(driver):
         "div[class*='overlay'] button",
         "[aria-label='Close']",
         "#gdpr-consent-tool-wrapper button",
-        "button[data-dismiss='modal']"
+        "button[data-dismiss='modal']",
+        # Additional selectors for common patterns
+        ".modal-close",
+        "[class*='cookie'] button",
+        "[class*='consent'] button",
+        "[class*='newsletter'] button[class*='close']",
+        "[class*='subscribe'] button[class*='close']",
+        "button[class*='dismiss']",
+        "[role='dialog'] button",
+        "[aria-modal='true'] button"
     ]
+    
+    # Execute JavaScript to handle common overlay patterns
+    driver.execute_script("""
+        const elements = document.querySelectorAll('div[class*="overlay"], div[class*="modal"], div[class*="popup"]');
+        elements.forEach(el => {
+            if (window.getComputedStyle(el).zIndex > 1000) {
+                el.remove();
+            }
+        });
+    """)
     
     for selector in common_popup_selectors:
         try:
             elements = driver.find_elements(By.CSS_SELECTOR, selector)
             for element in elements:
                 if element.is_displayed():
-                    element.click()
-                    time.sleep(0.5)  # Wait for popup to close
-        except (NoSuchElementException, WebDriverException):
-            pass  # Continue if no popups or can't interact with them
+                    # Try multiple methods to close
+                    try:
+                        element.click()
+                    except:
+                        driver.execute_script("arguments[0].click();", element)
+                    time.sleep(0.5)
+        except:
+            continue
 
-def extract_all_visible_text(driver):
-    """ Extract all visible text from the body of the webpage. """
+def scroll_page_dynamically(driver, pause_time=1.0):
+    """Enhanced scroll with smarter dynamic content detection"""
+    last_height = driver.execute_script("return document.body.scrollHeight")
+    scroll_attempts = 0
+    max_attempts = 5
+    
+    while scroll_attempts < max_attempts:
+        # Smooth scroll with pauses
+        driver.execute_script("""
+            const height = document.body.scrollHeight;
+            for(let i = 0; i < height; i += 100) {
+                setTimeout(() => window.scrollTo(0, i), i/2);
+            }
+        """)
+        
+        # Wait for dynamic content
+        time.sleep(pause_time)
+        
+        # Check for lazy-loaded images and infinite scroll triggers
+        driver.execute_script("""
+            const images = document.querySelectorAll('img[loading="lazy"]');
+            images.forEach(img => {
+                img.scrollIntoView();
+            });
+            
+            // Trigger infinite scroll if present
+            const scrollTriggers = document.querySelectorAll(
+                '[class*="load-more"], [class*="infinite"], [class*="pagination"]'
+            );
+            scrollTriggers.forEach(trigger => {
+                if (trigger.getBoundingClientRect().top <= window.innerHeight) {
+                    trigger.click();
+                }
+            });
+        """)
+        
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            scroll_attempts += 1
+        else:
+            scroll_attempts = 0
+            last_height = new_height
+            
+        time.sleep(pause_time)
+    
+    # Scroll back to top
+    driver.execute_script("window.scrollTo(0, 0);")
+    return last_height
+
+def wait_for_dynamic_elements(driver, timeout=30):
+    """
+    Wait for dynamic elements to load and become stable.
+    """
     try:
-        # Get the entire body text
-        body_element = driver.find_element(By.TAG_NAME, 'body')
-        return body_element.text.strip()
-    except NoSuchElementException:
-        return None
+        # Wait for DOM to become stable (no new elements being added)
+        initial_elements = len(driver.find_elements(By.XPATH, "//*"))
+        time.sleep(2)  # Initial pause
+        
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            current_elements = len(driver.find_elements(By.XPATH, "//*"))
+            if current_elements == initial_elements:
+                break
+            initial_elements = current_elements
+            time.sleep(1)
+            
+        # Wait for AJAX requests to complete
+        driver.execute_script("""
+            window.ajaxComplete = false;
+            var oldXHR = window.XMLHttpRequest;
+            function newXHR() {
+                var realXHR = new oldXHR();
+                realXHR.addEventListener("readystatechange", function() {
+                    if(realXHR.readyState == 4) {
+                        window.ajaxComplete = true;
+                    }
+                });
+                return realXHR;
+            }
+            window.XMLHttpRequest = newXHR;
+        """)
+        
+        # Wait for any animations to complete
+        WebDriverWait(driver, 5).until(
+            lambda d: d.execute_script(
+                "return window.jQuery ? jQuery.active == 0 : true"
+            )
+        )
+    except Exception as e:
+        print(f"Warning during dynamic element wait: {e}")
+
+def detect_and_handle_frames(driver):
+    """
+    Check for and handle content inside frames/iframes.
+    """
+    main_content = ""
+    try:
+        # Get content from main page
+        main_content = driver.find_element(By.TAG_NAME, "body").text
+        
+        # Find all frames and iframes
+        frames = driver.find_elements(By.TAG_NAME, "iframe") + driver.find_elements(By.TAG_NAME, "frame")
+        
+        # Switch to each frame and check for content
+        for frame in frames:
+            try:
+                driver.switch_to.frame(frame)
+                frame_content = driver.find_element(By.TAG_NAME, "body").text
+                if len(frame_content) > len(main_content):
+                    main_content = frame_content
+                driver.switch_to.parent_frame()
+            except:
+                driver.switch_to.default_content()
+                continue
+                
+    except Exception as e:
+        print(f"Frame handling error: {e}")
+    finally:
+        driver.switch_to.default_content()
+    
+    return main_content
+
+def handle_shadow_dom(driver):
+    """
+    Handle content within shadow DOM elements.
+    """
+    shadow_content = []
+    try:
+        # Find all shadow root hosts
+        shadow_hosts = driver.execute_script("""
+            return Array.from(document.querySelectorAll('*')).filter(el => el.shadowRoot);
+        """)
+        
+        for host in shadow_hosts:
+            try:
+                shadow_root = driver.execute_script("return arguments[0].shadowRoot", host)
+                if shadow_root:
+                    content = driver.execute_script("return arguments[0].textContent", shadow_root)
+                    shadow_content.append(content)
+            except:
+                continue
+                
+    except Exception as e:
+        print(f"Shadow DOM handling error: {e}")
+    
+    return ' '.join(shadow_content)
+
+
+
+def find_main_content(driver) -> str:
+    """Enhanced main content detection"""
+    try:
+        content_scores = []
+        
+        # Use advanced CSS selectors for content
+        content_selectors = [
+            'article', 'main', 
+            '[role="main"]', '[role="article"]',
+            '[class*="content"]:not([class*="sidebar"])',
+            '[class*="article"]:not([class*="related"])',
+            '[class*="post"]:not([class*="navigation"])',
+            '[id*="content"]:not([id*="sidebar"])',
+            '[class*="story"]'
+        ]
+        
+        for selector in content_selectors:
+            elements = driver.find_elements(By.CSS_SELECTOR, selector)
+            for element in elements:
+                if element.is_displayed():
+                    text = element.text
+                    html = element.get_attribute('outerHTML')
+                    
+                    # Calculate content score based on multiple factors
+                    score = 0
+                    if len(text) > 500:
+                        score += 10
+                    if len(text) > 1000:
+                        score += 20
+                        
+                    # Check for paragraphs
+                    paragraphs = element.find_elements(By.TAG_NAME, "p")
+                    score += len(paragraphs) * 2
+                    
+                    # Check text density
+                    if html:
+                        text_density = len(text) / len(html)
+                        score += text_density * 30
+                        
+                    content_scores.append((element, score))
+        
+        if content_scores:
+            # Get element with highest score
+            best_element = max(content_scores, key=lambda x: x[1])[0]
+            return best_element.text
+            
+        # Fallback: use your original method
+        return driver.find_element(By.TAG_NAME, "body").text
+        
+    except Exception as e:
+        print(f"Error finding main content: {e}")
+        return ""
+
+def clean_extracted_text(text: str) -> str:
+    """Enhanced text cleaning with more patterns"""
+    # Initial whitespace cleanup
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Expanded unwanted patterns
+    unwanted_patterns = [
+        r'(Share|Tweet|Email|Print|Comments)(\s+|$)',
+        r'©\s*\d{4}.*?reserved\.?',
+        r'Cookie Policy|Privacy Policy|Terms of Service',
+        r'Follow us on|Share this article',
+        r'\d+ shares?|\d+ comments?',
+        r'Related Articles?|More like this',
+        r'Advertisement|Sponsored Content|Promoted',
+        r'Subscribe to our newsletter',
+        r'Sign up for updates',
+        r'Follow us on social media',
+        r'\b\d+\s+min read\b',
+        r'Last updated:.*?\d{4}',
+        r'Posted on:.*?\d{4}',
+        r'Share this:.*?$',
+        r'Author:.*?$',
+        r'Tags:.*?$'
+    ]
+    
+    for pattern in unwanted_patterns:
+        text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+    
+    # Fix common formatting issues
+    text = re.sub(r'\.{2,}', '...', text)  # Fix ellipsis
+    text = re.sub(r'\s*[-–—]\s*', ' - ', text)  # Normalize dashes
+    text = re.sub(r'\s+([.,!?])', r'\1', text)  # Fix punctuation spacing
+    
+    # Remove empty lines and normalize paragraphs
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    text = '\n\n'.join(lines)
+    
+    return text.strip()
 
 def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Optional[str]]:
     """ Main function to scrape all visible text from a webpage using Selenium. """
@@ -221,35 +653,43 @@ def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Op
             if driver is None:
                 print("All browser options failed. Unable to scrape the page.")
                 return None, "Unable to initialize any browser."
-
+            
         # Load the webpage
         driver.get(url)
+        
+        # Wait for initial page load
         wait_for_page_load(driver, timeout)
-
-        # Handle popups
+        
+        # Handle dynamic content
+        wait_for_dynamic_elements(driver)
+        scroll_page_dynamically(driver)
         handle_popups(driver)
-
-        # Extract all visible text
-        content = extract_all_visible_text(driver)
-
-        if not content:
-            return None, "No visible text found on the page."
-        return content, None
-
+        
+        # Extract content from all possible sources
+        main_content = find_main_content(driver)
+        frame_content = detect_and_handle_frames(driver)
+        shadow_content = handle_shadow_dom(driver)
+        
+        # Combine and clean content
+        all_content = ' '.join(filter(None, [main_content, frame_content, shadow_content]))
+        cleaned_content = clean_extracted_text(all_content)
+        
+        # Validate content
+        if len(cleaned_content) < 50:  # Minimum content threshold
+            return None, "Insufficient content extracted"
+            
+        return cleaned_content, None
+        
     except TimeoutException:
-        print(f"Timeout while trying to fetch URL: {url}")
-        return None, "Page load timeout occurred."
+        return None, "Page load timeout occurred"
     except WebDriverException as e:
-        print(f"WebDriver error occurred while scraping: {e}")
-        return None, f"WebDriver error: {e}"
+        return None, f"WebDriver error: {str(e)}"
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return None, f"Unexpected error: {e}"
+        return None, f"Unexpected error: {str(e)}"
     finally:
         if driver and driver != working_driver:
             driver.quit()
 
-    return None, "Failed to scrape the page."
 
 def is_image_based_pdf(pdf_file):
     with pdfplumber.open(pdf_file) as pdf:

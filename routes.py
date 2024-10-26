@@ -48,22 +48,6 @@ def format_date_and_info(date_str):
         # print(f"Error formatting date: {e}")
         return date_str
 
-
-
-
-def scroll_page(driver):
-    last_height = driver.execute_script("return document.body.scrollHeight")
-    while True:
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(2)
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            break
-        last_height = new_height
-
-
-
-        
         
 def process_row(row):
     if pd.isna(row['B']):  # Skip empty rows
