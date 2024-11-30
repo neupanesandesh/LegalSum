@@ -11,7 +11,10 @@ from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
 import nltk
 from nltk.tokenize import word_tokenize
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from nltk.data import find
+import traceback
 from selenium import webdriver
 from typing import Optional, Tuple
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -323,141 +326,40 @@ def wait_for_page_load(driver, timeout=30):
     except TimeoutException:
         print("Page load timeout occurred. Continuing anyway.")
 
+
 def handle_popups(driver):
     """ Enhanced popup handling with more patterns """
     common_popup_selectors = [
-        "button[class*='close']",
-        "div[class*='modal'] button",
-        "div[id*='popup'] button",
-        "div[class*='overlay'] button",
-        "[aria-label='Close']",
-        "#gdpr-consent-tool-wrapper button",
-        "button[data-dismiss='modal']",
-        # Additional selectors for common patterns
-        ".modal-close",
-        "[class*='cookie'] button",
-        "[class*='consent'] button",
-        "[class*='newsletter'] button[class*='close']",
-        "[class*='subscribe'] button[class*='close']",
-        "button[class*='dismiss']",
-        "[role='dialog'] button",
-        "[aria-modal='true'] button"
+        "button[class*='close']", "div[class*='modal'] button",
+        "div[id*='popup'] button", "[aria-label='Close']",
+        "#gdpr-consent-tool-wrapper button", ".modal-close",
+        "[class*='cookie'] button", "[class*='consent'] button"
     ]
-    
-    # Execute JavaScript to handle common overlay patterns
-    driver.execute_script("""
-        const elements = document.querySelectorAll('div[class*="overlay"], div[class*="modal"], div[class*="popup"]');
-        elements.forEach(el => {
-            if (window.getComputedStyle(el).zIndex > 1000) {
-                el.remove();
-            }
-        });
-    """)
-    
-    for selector in common_popup_selectors:
-        try:
+    try:
+        for selector in common_popup_selectors:
             elements = driver.find_elements(By.CSS_SELECTOR, selector)
             for element in elements:
                 if element.is_displayed():
-                    # Try multiple methods to close
                     try:
                         element.click()
                     except:
                         driver.execute_script("arguments[0].click();", element)
                     time.sleep(0.5)
-        except:
-            continue
+    except Exception as e:
+        print(f"Error handling popups: {e}")
 
-def scroll_page_dynamically(driver, pause_time=1.0):
-    """Enhanced scroll with smarter dynamic content detection"""
-    last_height = driver.execute_script("return document.body.scrollHeight")
-    scroll_attempts = 0
-    max_attempts = 5
-    
-    while scroll_attempts < max_attempts:
-        # Smooth scroll with pauses
-        driver.execute_script("""
-            const height = document.body.scrollHeight;
-            for(let i = 0; i < height; i += 100) {
-                setTimeout(() => window.scrollTo(0, i), i/2);
-            }
-        """)
-        
-        # Wait for dynamic content
-        time.sleep(pause_time)
-        
-        # Check for lazy-loaded images and infinite scroll triggers
-        driver.execute_script("""
-            const images = document.querySelectorAll('img[loading="lazy"]');
-            images.forEach(img => {
-                img.scrollIntoView();
-            });
-            
-            // Trigger infinite scroll if present
-            const scrollTriggers = document.querySelectorAll(
-                '[class*="load-more"], [class*="infinite"], [class*="pagination"]'
-            );
-            scrollTriggers.forEach(trigger => {
-                if (trigger.getBoundingClientRect().top <= window.innerHeight) {
-                    trigger.click();
-                }
-            });
-        """)
-        
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            scroll_attempts += 1
-        else:
-            scroll_attempts = 0
-            last_height = new_height
-            
-        time.sleep(pause_time)
-    
-    # Scroll back to top
-    driver.execute_script("window.scrollTo(0, 0);")
-    return last_height
 
 def wait_for_dynamic_elements(driver, timeout=30):
-    """
-    Wait for dynamic elements to load and become stable.
-    """
+    """ Wait for dynamic elements to load and become stable. """
     try:
-        # Wait for DOM to become stable (no new elements being added)
-        initial_elements = len(driver.find_elements(By.XPATH, "//*"))
-        time.sleep(2)  # Initial pause
-        
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            current_elements = len(driver.find_elements(By.XPATH, "//*"))
-            if current_elements == initial_elements:
-                break
-            initial_elements = current_elements
-            time.sleep(1)
-            
-        # Wait for AJAX requests to complete
-        driver.execute_script("""
-            window.ajaxComplete = false;
-            var oldXHR = window.XMLHttpRequest;
-            function newXHR() {
-                var realXHR = new oldXHR();
-                realXHR.addEventListener("readystatechange", function() {
-                    if(realXHR.readyState == 4) {
-                        window.ajaxComplete = true;
-                    }
-                });
-                return realXHR;
-            }
-            window.XMLHttpRequest = newXHR;
-        """)
-        
-        # Wait for any animations to complete
-        WebDriverWait(driver, 5).until(
-            lambda d: d.execute_script(
-                "return window.jQuery ? jQuery.active == 0 : true"
-            )
+        # Wait for DOM stability
+        WebDriverWait(driver, timeout).until(
+            lambda d: len(d.find_elements(By.XPATH, "//*")) > 0 and 
+                      d.execute_script("return document.readyState === 'complete';")
         )
     except Exception as e:
         print(f"Warning during dynamic element wait: {e}")
+
 
 def detect_and_handle_frames(driver):
     """
@@ -610,85 +512,77 @@ def clean_extracted_text(text: str) -> str:
     return text.strip()
 
 def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Optional[str]]:
-    """ Main function to scrape all visible text from a webpage using Selenium. """
-    global working_driver
     driver = None
-
     try:
-        if working_driver:
-            print("Reusing previously successful browser driver.")
-            driver = working_driver
-        else:
-            browsers = [
-                ("Chrome", webdriver.Chrome, webdriver.ChromeOptions),
-                ("Edge", webdriver.Edge, webdriver.EdgeOptions),
-                ("Firefox", webdriver.Firefox, webdriver.FirefoxOptions),
-                ("Safari", webdriver.Safari, None),
-                ("Brave", webdriver.Chrome, webdriver.ChromeOptions)
-            ]
+        options = webdriver.ChromeOptions()
 
-            for browser_name, browser_class, options_class in browsers:
-                try:
-                    print(f"Trying {browser_name}...")
-                    options = options_class() if options_class else None
-                    if options:
-                        options.add_argument('--headless')
-                        options.add_argument('--no-sandbox')
-                        options.add_argument('--disable-dev-shm-usage')
-                        options.add_argument('--window-size=1920x1080')
-                        options.add_argument('--disable-gpu')
-                        options.add_argument('--ignore-certificate-errors')
-                        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
-                        
-                    if browser_name == "Brave":
-                        options.binary_location = "/usr/bin/brave-browser"
-                    
-                    driver = browser_class(options=options) if options else browser_class()
-                    working_driver = driver
-                    break
-                except WebDriverException as e:
-                    print(f"Failed to initialize {browser_name}: {e}")
-                    driver = None
-
-            if driver is None:
-                print("All browser options failed. Unable to scrape the page.")
-                return None, "Unable to initialize any browser."
-            
-        # Load the webpage
-        driver.get(url)
+        # Enhanced GPU and rendering configuration
+        options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--headless=new")
+        options.add_argument("--headless")
         
+        # More robust graphics rendering fallback
+        options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
+        options.add_argument("--disable-software-rasterizer")
+        options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
+        
+        # Media and audio configuration
+        options.add_argument("--disable-audio-output")
+        options.add_argument("--disable-video")
+        
+        # Ignore specific graphics and media errors
+        options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        
+        prefs = {
+            "profile.managed_default_content_settings.images": 2,
+            "profile.default_content_setting_values.media_stream": 2
+        }
+        options.add_experimental_option("prefs", prefs)
+
+        # Rest of your existing code remains the same
+        service = Service()
+        driver = webdriver.Chrome(service=service, options=options)
+        driver.set_page_load_timeout(timeout)
+        driver.get(url)
+
         # Wait for initial page load
         wait_for_page_load(driver, timeout)
-        
+
         # Handle dynamic content
         wait_for_dynamic_elements(driver)
-        scroll_page_dynamically(driver)
+        # scroll_page_dynamically(driver)
         handle_popups(driver)
-        
+
         # Extract content from all possible sources
         main_content = find_main_content(driver)
         frame_content = detect_and_handle_frames(driver)
         shadow_content = handle_shadow_dom(driver)
-        
+
         # Combine and clean content
         all_content = ' '.join(filter(None, [main_content, frame_content, shadow_content]))
         cleaned_content = clean_extracted_text(all_content)
-        
+
         # Validate content
-        if len(cleaned_content) < 50:  # Minimum content threshold
+        if len(cleaned_content) < 20:  # Minimum content threshold
             return None, "Insufficient content extracted"
-            
+
         return cleaned_content, None
-        
+
     except TimeoutException:
         return None, "Page load timeout occurred"
     except WebDriverException as e:
         return None, f"WebDriver error: {str(e)}"
     except Exception as e:
-        return None, f"Unexpected error: {str(e)}"
+        print(f"Selenium Scraping Error: {e}")
+        print(f"Error Type: {type(e).__name__}")
+        traceback.print_exc()
+        return None, str(e)
     finally:
-        if driver and driver != working_driver:
+        if driver:
             driver.quit()
+
 
 
 def is_image_based_pdf(pdf_file):
@@ -2179,30 +2073,39 @@ def main():
 
                     all_items = []
                     for idx, item in enumerate(results):
-                        web_content = scrap_web(item['link'])
-                        if web_content is None:
-                            st.warning(f"Failed to scrape content from {item['link']}")
-                            continue
-                        item['web_content'] = web_content
-                        newsletter_topic = get_topic_newsletter(item['web_content'])
-                        newsletter_data = newsletter(item['web_content'])
-                        newsletter_background = get_newsletter_background(item['web_content'])
-                        
-
-                        if newsletter_data is None:
-                            st.warning(f"Failed to process newsletter data for {item['link']}")
-                            continue
-
                         try:
+                            # Attempt to scrape web content
+                            web_content = scrap_web(item['link'])
+                            if web_content is None:
+                                st.warning(f"Failed to scrape content from {item['link']}")
+                                continue
+
+                            item['web_content'] = web_content
+
+                            # Attempt to get newsletter data and background
+                            newsletter_topic = get_topic_newsletter(item['web_content'])
+                            newsletter_data = newsletter(item['web_content'])
+                            newsletter_background = get_newsletter_background(item['web_content'])
+
+                            if newsletter_data is None:
+                                st.warning(f"Failed to process newsletter data for {item['link']}")
+                                continue
+
+                            # Process data and extract details
                             people_quotes = newsletter_data['newsletter']['people']
                             background = newsletter_background.get('background', 'No background available')
 
                             quoted = newsletter_data.get('quoted', 'No quotes available')
                             extracted_topic = newsletter_topic.get('topic', 'No topic found from web content')
-                            extracted_people_quotes = [{'name': person['name'],'quote': '\n'.join([f'"{quote}"' for quote in person["quote"]])}for person in people_quotes]
+                            extracted_people_quotes = [
+                                {
+                                    'name': person['name'],
+                                    'quote': '\n'.join([f'"{quote}"' for quote in person["quote"]])
+                                } for person in people_quotes
+                            ]
 
                             formatted_date = format_date_and_info(item['date'])
-                            
+
                             data = {
                                 'topic': extracted_topic,
                                 'background': background,
@@ -2215,11 +2118,14 @@ def main():
                             all_items.append(data)
 
                         except KeyError as e:
-                            print(f"Error processing data for {item['info']}: Missing key {e}")
+                            st.warning(f"Error processing data for {item['link']}: Missing key {e}. Skipping...")
+                            continue
                         except Exception as e:
-                            print(f"The webpage is temporarily down or blocks extraction, {item['info']}: {e}")
+                            st.warning(f"An error occurred with {item['link']}: {e}. Skipping...")
+                            continue
 
                     return all_items
+
 
                 # Title of the app
                 st.title('Newsletter Quotes')
