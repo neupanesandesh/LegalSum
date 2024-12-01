@@ -525,8 +525,9 @@ def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Op
         
         # More robust graphics rendering fallback
         options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
-        options.add_argument("--disable-software-rasterizer")
+        # options.add_argument("--disable-software-rasterizer")
         options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
+        options.add_argument("--enable-unsafe-swiftshader")
         
         # Media and audio configuration
         options.add_argument("--disable-audio-output")
@@ -2112,7 +2113,8 @@ def main():
                                 'people_quotes': extracted_people_quotes,
                                 'quoted': quoted,
                                 'link': item['link'],
-                                'date': formatted_date
+                                'date': formatted_date,
+                                'branch_head':item['branch_head']
                             }
 
                             all_items.append(data)

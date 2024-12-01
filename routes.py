@@ -56,13 +56,14 @@ def process_row(row):
     name_role = row['B'].split(', ', 1)
     name = name_role[0]
     role = name_role[1] if len(name_role) > 1 else ''
-    
+    branch_head = row['C']
     date_source = row['D'].split(', ', 1)
     date = date_source[0]
     
     return {
         'name': name,
         'role': role,
+        'branch_head':branch_head,
         'date': date,
         'link': row['E'],
         'info': row['F']
@@ -202,6 +203,17 @@ def get_newsletter_background(data):
 
 
 def create_docx(data_list):
+    # Define the order of major heads
+    branch_order = {
+        'E': 'EXECUTIVE BRANCH',
+        'L': 'LEGISLATIVE BRANCH',
+        'S': 'STATE OFFICIALS',
+        'O': 'OTHERS'
+    }
+
+    # Sort data_list based on branch_head order
+    data_list.sort(key=lambda x: list(branch_order.keys()).index(x['branch_head']))
+
     doc = Document()
     
     # Add header "DEA Quotes" with increased font size and centered
@@ -215,58 +227,70 @@ def create_docx(data_list):
     # Add today's date
     doc.add_paragraph(datetime.now().strftime("%B %d, %Y"))
 
-    for item in data_list:
-        # Add the topic to the document, bold only the name "Topic"
-        topic = item['topic']
-        p_topic = doc.add_paragraph()
-        run_topic_label = p_topic.add_run("Topic: ")
-        run_topic_label.bold = True
-        run_topic_content = p_topic.add_run(topic)
+    for branch, branch_name in branch_order.items():
+        # Filter items by branch_head
+        branch_items = [item for item in data_list if item['branch_head'] == branch]
 
-        # Add quoted information, bold only the name "Quoted"
-        quoted = item.get('quoted', 'No quotes available')
-        p_quoted = doc.add_paragraph()
-        run_quoted_label = p_quoted.add_run("Quoted: ")
-        run_quoted_label.bold = True
-        run_quoted_content = p_quoted.add_run(quoted)
+        if branch_items:
+            # Add branch name as a heading
+            branch_heading = doc.add_heading(level=2)
+            run_branch_heading = branch_heading.add_run(branch_name)
+            run_branch_heading.bold = True
+            run_branch_heading.font.size = Pt(16)
 
-        # Add background information, bold only the name "Background"
-        background = item.get('background', 'No background available')
-        p_background = doc.add_paragraph()
-        run_background_label = p_background.add_run("Background: ")
-        run_background_label.bold = True
-        run_background_content = p_background.add_run(background)
+            for item in branch_items:
+                # Add the topic to the document, bold only the name "Topic"
+                topic = item['topic']
+                p_topic = doc.add_paragraph()
+                run_topic_label = p_topic.add_run("Topic: ")
+                run_topic_label.bold = True
+                run_topic_content = p_topic.add_run(topic)
 
-        # Add names and their quotes
-        people_quotes = item.get('people_quotes', [])
-        if not people_quotes:
-            doc.add_paragraph("No quotes found in people_quotes.")
-        else:
-            for entry in people_quotes:
-                name = entry.get('name', 'Unknown')
-                quote = entry.get('quote', 'No quote available')
-                p_name = doc.add_paragraph()
-                run_name = p_name.add_run(name)
-                run_name.bold = True  # Make the name bold
+                # Add quoted information, bold only the name "Quoted"
+                quoted = item.get('quoted', 'No quotes available')
+                p_quoted = doc.add_paragraph()
+                run_quoted_label = p_quoted.add_run("Quoted: ")
+                run_quoted_label.bold = True
+                run_quoted_content = p_quoted.add_run(quoted)
 
-                # Add quote in italics
-                p_quote = doc.add_paragraph()
-                run_quote = p_quote.add_run("Quote \n")
-                run_quote.bold = True  # Make the quote italic
-                run_quotes = p_quote.add_run(quote)
-                run_quotes.italic = True
-        # Add date
-        date = item.get('date', 'No date available')
-        doc.add_paragraph(f" {date}")
+                # Add background information, bold only the name "Background"
+                background = item.get('background', 'No background available')
+                p_background = doc.add_paragraph()
+                run_background_label = p_background.add_run("Background: ")
+                run_background_label.bold = True
+                run_background_content = p_background.add_run(background)
 
-        # Add link as a simple hyperlink
-        link = item.get('link', 'No link available')
-        p_link = doc.add_paragraph()
-        run_link = p_link.add_run(link)
-        run_link.font.color.rgb = RGBColor(0, 0, 255)  # Blue color for hyperlink
-        run_link.font.underline = True
+                # Add names and their quotes
+                people_quotes = item.get('people_quotes', [])
+                if not people_quotes:
+                    doc.add_paragraph("No quotes found in people_quotes.")
+                else:
+                    for entry in people_quotes:
+                        name = entry.get('name', 'Unknown')
+                        quote = entry.get('quote', 'No quote available')
+                        p_name = doc.add_paragraph()
+                        run_name = p_name.add_run(name)
+                        run_name.bold = True  # Make the name bold
 
-        doc.add_paragraph("---")  # Separator between entries
+                        # Add quote in italics
+                        p_quote = doc.add_paragraph()
+                        run_quote = p_quote.add_run("Quote \n")
+                        run_quote.bold = True  # Make the quote italic
+                        run_quotes = p_quote.add_run(quote)
+                        run_quotes.italic = True
+
+                # Add date
+                date = item.get('date', 'No date available')
+                doc.add_paragraph(f" {date}")
+
+                # Add link as a simple hyperlink
+                link = item.get('link', 'No link available')
+                p_link = doc.add_paragraph()
+                run_link = p_link.add_run(link)
+                run_link.font.color.rgb = RGBColor(0, 0, 255)  # Blue color for hyperlink
+                run_link.font.underline = True
+
+                doc.add_paragraph("---")  # Separator between entries
 
     # Save the document to a file
     doc_path = "newsletter_output.docx"
