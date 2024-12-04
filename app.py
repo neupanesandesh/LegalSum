@@ -31,6 +31,7 @@ import requests
 from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException, ElementClickInterceptedException
 from mailing import send_email
 import time
+from webdriver_manager.chrome import ChromeDriverManager
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 
@@ -542,7 +543,7 @@ def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Op
         options.add_experimental_option("prefs", prefs)
 
         # Rest of your existing code remains the same
-        service = Service()
+        service = Service(ChromeDriverManager(driver_version="131.0.6778.109").install())
         driver = webdriver.Chrome(service=service, options=options)
         driver.set_page_load_timeout(timeout)
         driver.get(url)

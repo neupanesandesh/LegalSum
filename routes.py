@@ -77,6 +77,7 @@ def newsletter(data):
     Here is the web content extracted from the webpage: {data}. 
     
     Return the results in a proper JSON format directly like this:
+    
     {{
         "newsletter": \u0028
             "people": [
@@ -94,10 +95,10 @@ def newsletter(data):
                 "another quote by same person (if any)"
                 ]
             \u0029
-            // more if any
+            // more if any...
             ]
         \u0029,
-        "quoted": "Person 1 - Role 1, Person 2 - Role 2"
+        "quoted": "Person 1 - Role 1, Person 2 - Role 2, Person 3 - Role 3,......"
     }}
 
     """
@@ -105,8 +106,8 @@ def newsletter(data):
     # Call the OpenAI API to generate a summary
     response = client.chat.completions.create(
         model=GPTModel,
-        temperature=0.0,
-        max_tokens=600,
+        temperature=0.3,
+        max_tokens=1000,
         messages=[
             {"role": "system", "content": context},
             # {"role": "user", "content": data}
