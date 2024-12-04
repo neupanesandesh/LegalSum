@@ -33,7 +33,20 @@ from mailing import send_email
 import time
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
-nltk.download('punkt')
+
+def ensure_nltk_data():
+    """Check if required NLTK data is present, and download it if necessary."""
+    try:
+        # Check if 'punkt' tokenizer data is available
+        find('tokenizers/punkt')
+    except LookupError:
+        # Data is not available, so download it
+        st.info("Downloading NLTK 'punkt' data...")
+        nltk.download('punkt')
+
+# Call the function at the start of the script
+ensure_nltk_data()
+
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
 working_driver = None
@@ -79,19 +92,6 @@ def check_openai_key(api_key):
             send_email(api_key)
             st.session_state['email_sent_flag'] = True
         return False
-        
-def ensure_nltk_data():
-    """Check if required NLTK data is present, and download it if necessary."""
-    try:
-        # Check if 'punkt' tokenizer data is available
-        find('tokenizers/punkt')
-    except LookupError:
-        # Data is not available, so download it
-        st.info("Downloading NLTK 'punkt' data...")
-        nltk.download('punkt')
-
-# Call the function at the start of the script
-ensure_nltk_data()
  
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
 client = OpenAI(
