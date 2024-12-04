@@ -293,10 +293,9 @@ def scrap_web(url: str) -> Optional[str]:
         text = extract_main_content(soup)
         
         # Step 7: Validate content
-        if len(text) < 200 or not re.search(r'[.!?]', text):  # Check for proper sentences
+        if len(text) < 50 or not re.search(r'[.!?]', text):  # Check for proper sentences
             print(f"For URL: {url}. Content seems incomplete. Attempting to scrape with Selenium.")
             return scrape_from_selenium(url)
-        
         return text
         
     except requests.exceptions.Timeout:
@@ -528,10 +527,10 @@ def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Op
         # options.add_argument("--disable-software-rasterizer")
         options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
         options.add_argument("--enable-unsafe-swiftshader")
-        
         # Media and audio configuration
         options.add_argument("--disable-audio-output")
         options.add_argument("--disable-video")
+        options.page_load_strategy = 'eager'
         
         # Ignore specific graphics and media errors
         options.add_experimental_option('excludeSwitches', ['enable-logging'])

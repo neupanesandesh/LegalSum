@@ -76,7 +76,7 @@ def newsletter(data):
     After getting those names also get the role of those personnel and collectively store in a "quoted" section of json.
     Here is the web content extracted from the webpage: {data}. 
     
-    Return the results in a JSON format strictly directly like this:
+    Return the results in a proper JSON format directly like this:
     {{
         "newsletter": \u0028
             "people": [
@@ -94,7 +94,7 @@ def newsletter(data):
                 "another quote by same person (if any)"
                 ]
             \u0029
-            // Add more people as needed
+            // more if any
             ]
         \u0029,
         "quoted": "Person 1 - Role 1, Person 2 - Role 2"
@@ -114,18 +114,17 @@ def newsletter(data):
     )
     
     response_content = response.choices[0].message.content
-    print({"resp_content":response_content})
+    print({"response_content":response_content})
     cleaned_response = response_content.replace('```json\n', "").replace('\n```', "")
-    # print(cleaned_response)
-    
-
+    print({"cleaned":cleaned_response})
     # Parse the JSON response
     try:
         structured_data = json.loads(cleaned_response)
-        return structured_data
     except json.JSONDecodeError as e:
         print("Failed to decode JSON:", e)
-        return cleaned_response
+        return None
+    print(structured_data)
+    return structured_data
 
 
 def get_topic_newsletter(data):
