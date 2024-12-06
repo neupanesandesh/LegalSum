@@ -19,7 +19,7 @@ from selenium import webdriver
 from typing import Optional, Tuple
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.edge.options import Options as EdgeOptions
-from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.options import Options
 import docx2txt
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -50,6 +50,7 @@ ensure_nltk_data()
 
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
+chrome_path = os.getenv("chrome_path")
 working_driver = None
 if 'email_sent_flag' not in st.session_state:
     st.session_state['email_sent_flag'] = False # Initialize it to False
@@ -515,13 +516,13 @@ def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Op
     driver = None
     try:
         options = webdriver.ChromeOptions()
-
+        options.binary_location = chrome_path
         # Enhanced GPU and rendering configuration
-        options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
         options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--headless=new")
         options.add_argument("--headless")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
+        options.add_argument("--headless=new")
         
         # More robust graphics rendering fallback
         options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
