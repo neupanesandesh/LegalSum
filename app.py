@@ -542,7 +542,8 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
 
         # Rest of your existing code remains the same
         # service = Service()
-        driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
         driver.set_page_load_timeout(timeout)
         driver.get(url)
 

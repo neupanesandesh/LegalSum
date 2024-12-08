@@ -7,5 +7,3 @@ libappindicator3-1
 libasound2
 fonts-liberation
 xvfb
-chromium-browser
-chromium-chromedriver
