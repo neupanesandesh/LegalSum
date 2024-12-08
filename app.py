@@ -12,28 +12,24 @@ import streamlit_authenticator as stauth
 import nltk
 from nltk.tokenize import word_tokenize
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from nltk.data import find
 import traceback
 from selenium import webdriver
 from typing import Optional, Tuple
-from selenium.webdriver.firefox.options import Options as FirefoxOptions
-from selenium.webdriver.edge.options import Options as EdgeOptions
 from selenium.webdriver.chrome.options import Options
 import docx2txt
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 from selenium.common.exceptions import WebDriverException, TimeoutException
 from selenium.webdriver.common.by import By
 from routes import process_row,newsletter,create_docx, get_newsletter_background, get_topic_newsletter, format_date_and_info
 import requests
-from selenium.common.exceptions import TimeoutException, WebDriverException, NoSuchElementException, ElementClickInterceptedException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from mailing import send_email
 import time
-from webdriver_manager.chrome import ChromeDriverManager
-from PyPDF2 import PdfReader
 from dotenv import load_dotenv
+load_dotenv()
+OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
 
 def ensure_nltk_data():
     """Check if required NLTK data is present, and download it if necessary."""
@@ -48,9 +44,6 @@ def ensure_nltk_data():
 # Call the function at the start of the script
 ensure_nltk_data()
 
-load_dotenv()
-OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
-chrome_path = os.getenv("chrome_path")
 working_driver = None
 if 'email_sent_flag' not in st.session_state:
     st.session_state['email_sent_flag'] = False # Initialize it to False
@@ -512,11 +505,10 @@ def clean_extracted_text(text: str) -> str:
     
     return text.strip()
 
-def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Optional[str]]:
+def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str]]:
     driver = None
     try:
-        options = webdriver.ChromeOptions()
-        options.binary_location = chrome_path
+        options = Options()
         # Enhanced GPU and rendering configuration
         options.add_argument("--no-sandbox")
         options.add_argument("--headless")
@@ -544,8 +536,8 @@ def scrape_from_selenium(url: str, timeout: int = 30) -> Tuple[Optional[str], Op
         options.add_experimental_option("prefs", prefs)
 
         # Rest of your existing code remains the same
-        service = Service(ChromeDriverManager(driver_version="131.0.6778.109").install())
-        driver = webdriver.Chrome(service=service, options=options)
+        # service = Service(ChromeDriverManager(driver_version="131.0.6778.109").install())
+        driver = webdriver.Chrome(options=options)
         driver.set_page_load_timeout(timeout)
         driver.get(url)
 
