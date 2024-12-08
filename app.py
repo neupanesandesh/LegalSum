@@ -28,6 +28,7 @@ import requests
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from mailing import send_email
+import undetected_chromedriver as uc
 import time
 from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
@@ -508,42 +509,74 @@ def clean_extracted_text(text: str) -> str:
     
     return text.strip()
 
-def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str]]:
-    driver = None
+def setup_undetected_chrome():
+    """
+    Set up an undetected ChromeDriver for cloud environments
+    This method provides more robust browser automation
+    """
+    chrome_options = uc.ChromeOptions()
+    
+    # Essential cloud deployment options
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-gpu')
+    
+    # Reduce detection probability
+    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+    chrome_options.add_experimental_option('useAutomationExtension', False)
+    
     try:
-        options = Options()
-        # Enhanced GPU and rendering configuration
-        options.add_argument("--start-maximized")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--headless")
-        options.add_argument("--disable-dev-shm-usage")
-        # options.add_argument('--disable-infobars')
-        # options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
-        # options.add_argument("--headless=new")
+        # Use undetected_chromedriver for more reliable cloud deployment
+        driver = uc.Chrome(
+            options=chrome_options,
+            use_subprocess=True
+        )
+        return driver
+    except Exception as e:
+        print(f"Chrome WebDriver Setup Error: {e}")
+        return None
+
+def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str]]:
+    # driver = None
+    try:
+        # options = Options()
+        # # Enhanced GPU and rendering configuration
+        # options.add_argument("--start-maximized")
+        # options.add_argument("--no-sandbox")
+        # options.add_argument("--headless")
+        # options.add_argument("--disable-dev-shm-usage")
+        # # options.add_argument('--disable-infobars')
+        # # options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
+        # # options.add_argument("--headless=new")
         
-        # # More robust graphics rendering fallback
-        # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
-        options.add_argument("--disable-software-rasterizer")
-        options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
-        # options.add_argument("--enable-unsafe-swiftshader")
-        # # Media and audio configuration
-        # options.add_argument("--disable-audio-output")
-        options.add_argument("--disable-video")
-        # options.page_load_strategy = 'eager'
+        # # # More robust graphics rendering fallback
+        # # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
+        # options.add_argument("--disable-software-rasterizer")
+        # options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
+        # # options.add_argument("--enable-unsafe-swiftshader")
+        # # # Media and audio configuration
+        # # options.add_argument("--disable-audio-output")
+        # options.add_argument("--disable-video")
+        # # options.page_load_strategy = 'eager'
         
-        # Ignore specific graphics and media errors
-        options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        # # Ignore specific graphics and media errors
+        # options.add_experimental_option('excludeSwitches', ['enable-logging'])
         
-        prefs = {
-            "profile.managed_default_content_settings.images": 2,
-            "profile.default_content_setting_values.media_stream": 2
-        }
-        options.add_experimental_option("prefs", prefs)
+        # prefs = {
+        #     "profile.managed_default_content_settings.images": 2,
+        #     "profile.default_content_setting_values.media_stream": 2
+        # }
+        # options.add_experimental_option("prefs", prefs)
 
         # Rest of your existing code remains the same
         # service = Service()
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
+        # service = Service(ChromeDriverManager().install())
+        driver = setup_undetected_chrome()
+        
+        if not driver:
+            return None, "Failed to initialize WebDriver"
+        
         driver.set_page_load_timeout(timeout)
         driver.get(url)
 
