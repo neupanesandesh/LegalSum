@@ -24,6 +24,7 @@ from selenium.common.exceptions import WebDriverException, TimeoutException
 from selenium.webdriver.common.by import By
 from routes import process_row,newsletter,create_docx, get_newsletter_background, get_topic_newsletter, format_date_and_info
 import requests
+from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from mailing import send_email
 import time
@@ -536,8 +537,8 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         options.add_experimental_option("prefs", prefs)
 
         # Rest of your existing code remains the same
-        # service = Service(ChromeDriverManager(driver_version="131.0.6778.109").install())
-        driver = webdriver.Chrome(options=options)
+        service = Service()
+        driver = webdriver.Chrome(service=service, options=options)
         driver.set_page_load_timeout(timeout)
         driver.get(url)
 
