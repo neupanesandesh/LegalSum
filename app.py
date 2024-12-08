@@ -511,7 +511,7 @@ def clean_extracted_text(text: str) -> str:
 
 
 def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str]]:
-    # driver = None
+    driver = None
     try:
         options = Options()
         # Enhanced GPU and rendering configuration
