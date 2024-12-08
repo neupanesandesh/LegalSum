@@ -13,6 +13,7 @@ import nltk
 from nltk.tokenize import word_tokenize
 from selenium import webdriver
 from nltk.data import find
+from selenium.webdriver.chrome.service import Service as ChromeService
 import traceback
 from selenium import webdriver
 from typing import Optional, Tuple
@@ -541,7 +542,7 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
 
         # Rest of your existing code remains the same
         # service = Service()
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),options=options)
+        driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
         driver.set_page_load_timeout(timeout)
         driver.get(url)
 
