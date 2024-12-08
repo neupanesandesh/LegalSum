@@ -532,7 +532,13 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         # options.add_argument("--disable-audio-output")
         options.add_argument("--disable-video")
         # options.page_load_strategy = 'eager'
-        
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-logging")
+        options.add_argument("--disable-crash-reporter")
+        options.add_argument("--disable-background-networking")
+        options.add_argument("--remote-debugging-port=9222")
+
+
         # Ignore specific graphics and media errors
         options.add_experimental_option('excludeSwitches', ['enable-logging'])
         
@@ -545,11 +551,12 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         # Rest of your existing code remains the same
         # service = Service()
         # service = Service(ChromeDriverManager().install())
-        driver = uc.Chrome(driver_executable_path=ChromeDriverManager().install(),options=options)
-        
-        if not driver:
-            return None, "Failed to initialize WebDriver"
-        
+        # Use undetected_chromedriver (uc) and webdriver_manager to handle ChromeDriver
+        driver = uc.Chrome(
+            driver_executable_path=ChromeDriverManager().install(),  # Automatically download the right version of ChromeDriver
+            options=options
+        )
+
         driver.set_page_load_timeout(timeout)
         driver.get(url)
 
