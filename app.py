@@ -513,11 +513,12 @@ def clean_extracted_text(text: str) -> str:
 def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str]]:
     driver = None
     try:
-        options = Options()
+        options = uc.ChromeOptions()
         # Enhanced GPU and rendering configuration
         options.add_argument("--start-maximized")
         options.add_argument("--no-sandbox")
         options.add_argument("--headless")
+        options.headless=True
         options.add_argument("--disable-dev-shm-usage")
         # options.add_argument('--disable-infobars')
         # options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
@@ -552,10 +553,7 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         # service = Service()
         # service = Service(ChromeDriverManager().install())
         # Use undetected_chromedriver (uc) and webdriver_manager to handle ChromeDriver
-        driver = uc.Chrome(
-            driver_executable_path=ChromeDriverManager().install(),  # Automatically download the right version of ChromeDriver
-            options=options
-        )
+        driver = uc.Chrome(options=options)
 
         driver.set_page_load_timeout(timeout)
         driver.get(url)
