@@ -511,31 +511,35 @@ def clean_extracted_text(text: str) -> str:
 
 def setup_undetected_chrome():
     """
-    Set up an undetected ChromeDriver for cloud environments
-    This method provides more robust browser automation
+    Set up an undetected ChromeDriver for cloud environments.
+    This method provides more robust browser automation.
     """
-    chrome_options = uc.ChromeOptions()
-    
-    # Essential cloud deployment options
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable-gpu')
-    
-    # Reduce detection probability
-    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-    chrome_options.add_experimental_option('useAutomationExtension', False)
-    
     try:
-        # Use undetected_chromedriver for more reliable cloud deployment
-        driver = uc.Chrome(
-            options=chrome_options,
-            use_subprocess=True
-        )
+        import undetected_chromedriver as uc
+        from selenium.webdriver.chrome.service import Service
+        from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
+        chrome_options = uc.ChromeOptions()
+
+        # Cloud-friendly options
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+
+        # Instantiate the WebDriver
+        driver = uc.Chrome(options=chrome_options, use_subprocess=True)
         return driver
+
+    except ImportError as e:
+        raise ImportError("Ensure undetected-chromedriver is installed. "
+                          "Run `pip install undetected-chromedriver`.") from e
     except Exception as e:
-        print(f"Chrome WebDriver Setup Error: {e}")
+        print(f"Error setting up ChromeDriver: {e}")
         return None
+
 
 def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str]]:
     # driver = None
