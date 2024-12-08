@@ -513,28 +513,29 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         # Enhanced GPU and rendering configuration
         options.add_argument("--no-sandbox")
         options.add_argument("--headless")
+        options.add_argument('--disable-infobars')
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
-        options.add_argument("--headless=new")
+        # options.add_argument("--headless=new")
         
-        # More robust graphics rendering fallback
-        options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
-        # options.add_argument("--disable-software-rasterizer")
-        options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
-        options.add_argument("--enable-unsafe-swiftshader")
-        # Media and audio configuration
-        options.add_argument("--disable-audio-output")
-        options.add_argument("--disable-video")
-        options.page_load_strategy = 'eager'
+        # # More robust graphics rendering fallback
+        # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
+        # # options.add_argument("--disable-software-rasterizer")
+        # options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
+        # options.add_argument("--enable-unsafe-swiftshader")
+        # # Media and audio configuration
+        # options.add_argument("--disable-audio-output")
+        # options.add_argument("--disable-video")
+        # options.page_load_strategy = 'eager'
         
         # Ignore specific graphics and media errors
-        options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        # options.add_experimental_option('excludeSwitches', ['enable-logging'])
         
-        prefs = {
-            "profile.managed_default_content_settings.images": 2,
-            "profile.default_content_setting_values.media_stream": 2
-        }
-        options.add_experimental_option("prefs", prefs)
+        # prefs = {
+        #     "profile.managed_default_content_settings.images": 2,
+        #     "profile.default_content_setting_values.media_stream": 2
+        # }
+        # options.add_experimental_option("prefs", prefs)
 
         # Rest of your existing code remains the same
         service = Service()
