@@ -515,14 +515,18 @@ def clean_extracted_text(text: str) -> str:
 def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str]]:
     driver = None
     try:
-        options = Options()
+        # options = Options()
+        options = webdriver.ChromeOptions()
+        options.add_argument('--headless')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=1920,1200')
         # options.binary_location = "/usr/bin/chromium-browser"
         # Enhanced GPU and rendering configuration
-        options.add_argument("--start-maximized")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--headless")
+        # options.add_argument("--start-maximized")
+        # options.add_argument("--no-sandbox")
+        # options.add_argument("--headless")
         # options.headless=True
-        options.add_argument("--disable-dev-shm-usage")
+        # options.add_argument("--disable-dev-shm-usage")
         # options.add_argument('--disable-infobars')
         # options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
         # options.add_argument("--headless=new")
@@ -544,15 +548,16 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
 
 
         # Ignore specific graphics and media errors
-        options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        # options.add_experimental_option('excludeSwitches', ['enable-logging'])
         
-        prefs = {
-            "profile.managed_default_content_settings.images": 2,
-            "profile.default_content_setting_values.media_stream": 2
-        }
-        options.add_experimental_option("prefs", prefs)
-        driver = webdriver.Chrome(service=Service(chromedriver_autoinstaller.install()), options=options)
-        
+        # prefs = {
+        #     "profile.managed_default_content_settings.images": 2,
+        #     "profile.default_content_setting_values.media_stream": 2
+        # }
+        # options.add_experimental_option("prefs", prefs)
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),
+                                  options=options)
+        st.write(f"DEBUG:DRIVER:{driver}")
         # driver.set_page_load_timeout(timeout)
         driver.get(url)
         time.sleep(10)
