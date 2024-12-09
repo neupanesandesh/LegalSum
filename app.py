@@ -514,6 +514,7 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
     driver = None
     try:
         options = webdriver.ChromeOptions()
+        options.binary_location = "/usr/bin/chromium-browser"
         # Enhanced GPU and rendering configuration
         options.add_argument("--start-maximized")
         options.add_argument("--no-sandbox")
