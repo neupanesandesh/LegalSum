@@ -19,7 +19,6 @@ from selenium import webdriver
 from typing import Optional, Tuple
 from selenium.webdriver.chrome.options import Options
 import docx2txt
-import chromedriver
 from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
 from selenium.common.exceptions import WebDriverException, TimeoutException
