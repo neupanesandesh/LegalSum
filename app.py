@@ -31,6 +31,7 @@ from mailing import send_email
 import undetected_chromedriver as uc
 import time
 from webdriver_manager.core.os_manager import ChromeType
+import chromedriver_autoinstaller
 from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 load_dotenv()
@@ -550,7 +551,7 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
             "profile.default_content_setting_values.media_stream": 2
         }
         options.add_experimental_option("prefs", prefs)
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()), options=options)
+        driver = webdriver.Chrome(service=Service(chromedriver_autoinstaller.install()), options=options)
         
         # driver.set_page_load_timeout(timeout)
         driver.get(url)
