@@ -519,12 +519,12 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         # Enhanced GPU and rendering configuration
         # options.add_argument("--start-maximized")
         options.add_argument("--no-sandbox")
-        # options.add_argument("--headless")
+        options.add_argument("--headless")
         # options.headless=True
-        # options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-dev-shm-usage")
         # options.add_argument('--disable-infobars')
         options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
-        options.add_argument("--headless=new")
+        # options.add_argument("--headless=new")
         
         # # More robust graphics rendering fallback
         # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
