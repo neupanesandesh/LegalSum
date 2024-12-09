@@ -25,6 +25,7 @@ from selenium.common.exceptions import WebDriverException, TimeoutException
 from selenium.webdriver.common.by import By
 from routes import process_row,newsletter,create_docx, get_newsletter_background, get_topic_newsletter, format_date_and_info
 import requests
+import shutil
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from mailing import send_email
@@ -512,53 +513,25 @@ def clean_extracted_text(text: str) -> str:
     return text.strip()
 
 
-def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str]]:
+
+
+def get_webdriver_options() -> Options:
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-features=NetworkService")
+    options.add_argument("--window-size=1920x1080")
+    options.add_argument("--disable-features=VizDisplayCompositor")
+    options.add_argument('--ignore-certificate-errors')
+    return options
+
+def scrape_from_selenium(url: str,logpath: str, proxy: str, socksStr: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str],Optional[list],Optional[list],Optional[str]]:
     driver = None
     try:
-        # options = Options()
-        options = webdriver.ChromeOptions()
-        options.add_argument('--headless')
-        options.add_argument('--disable-gpu')
-        options.add_argument('--window-size=1920,1200')
-        # options.binary_location = "/usr/bin/chromium-browser"
-        # Enhanced GPU and rendering configuration
-        # options.add_argument("--start-maximized")
-        # options.add_argument("--no-sandbox")
-        # options.add_argument("--headless")
-        # options.headless=True
-        # options.add_argument("--disable-dev-shm-usage")
-        # options.add_argument('--disable-infobars')
-        # options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
-        # options.add_argument("--headless=new")
-        
-        # # More robust graphics rendering fallback
-        # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
-        # options.add_argument("--disable-software-rasterizer")
-        # options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
-        # options.add_argument("--enable-unsafe-swiftshader")
-        # # Media and audio configuration
-        # options.add_argument("--disable-audio-output")
-        # options.add_argument("--disable-video")
-        # # options.page_load_strategy = 'eager'
-        # options.add_argument("--disable-extensions")
-        # options.add_argument("--disable-logging")
-        # options.add_argument("--disable-crash-reporter")
-        # options.add_argument("--disable-background-networking")
-        # options.add_argument("--remote-debugging-port=9222")
-
-
-        # Ignore specific graphics and media errors
-        # options.add_experimental_option('excludeSwitches', ['enable-logging'])
-        
-        # prefs = {
-        #     "profile.managed_default_content_settings.images": 2,
-        #     "profile.default_content_setting_values.media_stream": 2
-        # }
-        # options.add_experimental_option("prefs", prefs)
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),
-                                  options=options)
-        st.write(f"DEBUG:DRIVER:{driver}")
-        # driver.set_page_load_timeout(timeout)
+        options = get_webdriver_options()
+        driver =  webdriver.Chrome(options=options)
         driver.get(url)
         time.sleep(10)
         # Wait for initial page load
@@ -1612,6 +1585,16 @@ def is_positive_integer(value):
     
 # Define the Streamlit app
 def main():
+    if "proxy" not in st.session_state:
+        st.session_state.proxy = None
+    if "proxies" not in st.session_state:
+        st.session_state.proxies = None
+    if "socks5" not in st.session_state:
+        st.session_state.socks5 = False
+    if "df" not in st.session_state:
+        st.session_state.df = None
+    if "countries" not in st.session_state:
+        st.session_state.countries = None
     check_openai_key(OPENAI_API_KEY)
     ensure_nltk_data()
     global page_count
