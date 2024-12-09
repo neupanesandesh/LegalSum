@@ -307,22 +307,22 @@ def scrap_web(url: str) -> Optional[str]:
         print(f"For URL: {url}. Error: {e}. Attempting to scrape with Selenium.")
         return scrape_from_selenium(url)
     
-def wait_for_page_load(driver, timeout=20):
-    """ Enhanced wait for page load with additional checks """
-    try:
-        WebDriverWait(driver, timeout).until(
-            lambda d: d.execute_script("""
-                return (
-                    document.readyState === 'complete' && 
-                    !document.querySelector('.loading') &&
-                    !document.querySelector('[data-loading="true"]') &&
-                    (!window.jQuery || jQuery.active === 0) &&
-                    !document.querySelector('img[loading="lazy"]:not([src])')
-                )
-            """)
-        )
-    except TimeoutException:
-        print("Page load timeout occurred. Continuing anyway.")
+# def wait_for_page_load(driver, timeout=20):
+#     """ Enhanced wait for page load with additional checks """
+#     try:
+#         WebDriverWait(driver, timeout).until(
+#             lambda d: d.execute_script("""
+#                 return (
+#                     document.readyState === 'complete' && 
+#                     !document.querySelector('.loading') &&
+#                     !document.querySelector('[data-loading="true"]') &&
+#                     (!window.jQuery || jQuery.active === 0) &&
+#                     !document.querySelector('img[loading="lazy"]:not([src])')
+#                 )
+#             """)
+#         )
+#     except TimeoutException:
+#         print("Page load timeout occurred. Continuing anyway.")
 
 
 def handle_popups(driver):
@@ -555,7 +555,7 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         driver.get(url)
         time.sleep(5)
         # Wait for initial page load
-        wait_for_page_load(driver, timeout)
+        # wait_for_page_load(driver, timeout)
 
         # Handle dynamic content
         wait_for_dynamic_elements(driver)
