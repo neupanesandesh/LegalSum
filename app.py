@@ -307,22 +307,22 @@ def scrap_web(url: str) -> Optional[str]:
         print(f"For URL: {url}. Error: {e}. Attempting to scrape with Selenium.")
         return scrape_from_selenium(url)
     
-# def wait_for_page_load(driver, timeout=20):
-#     """ Enhanced wait for page load with additional checks """
-#     try:
-#         WebDriverWait(driver, timeout).until(
-#             lambda d: d.execute_script("""
-#                 return (
-#                     document.readyState === 'complete' && 
-#                     !document.querySelector('.loading') &&
-#                     !document.querySelector('[data-loading="true"]') &&
-#                     (!window.jQuery || jQuery.active === 0) &&
-#                     !document.querySelector('img[loading="lazy"]:not([src])')
-#                 )
-#             """)
-#         )
-#     except TimeoutException:
-#         print("Page load timeout occurred. Continuing anyway.")
+def wait_for_page_load(driver, timeout=20):
+    """ Enhanced wait for page load with additional checks """
+    try:
+        WebDriverWait(driver, timeout).until(
+            lambda d: d.execute_script("""
+                return (
+                    document.readyState === 'complete' && 
+                    !document.querySelector('.loading') &&
+                    !document.querySelector('[data-loading="true"]') &&
+                    (!window.jQuery || jQuery.active === 0) &&
+                    !document.querySelector('img[loading="lazy"]:not([src])')
+                )
+            """)
+        )
+    except TimeoutException:
+        print("Page load timeout occurred. Continuing anyway.")
 
 
 def handle_popups(driver):
@@ -519,7 +519,7 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         options.add_argument("--start-maximized")
         options.add_argument("--no-sandbox")
         options.add_argument("--headless")
-        options.headless=True
+        # options.headless=True
         options.add_argument("--disable-dev-shm-usage")
         # options.add_argument('--disable-infobars')
         # options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
@@ -527,18 +527,18 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         
         # # More robust graphics rendering fallback
         # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
-        options.add_argument("--disable-software-rasterizer")
-        options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
+        # options.add_argument("--disable-software-rasterizer")
+        # options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
         # options.add_argument("--enable-unsafe-swiftshader")
         # # Media and audio configuration
         # options.add_argument("--disable-audio-output")
-        options.add_argument("--disable-video")
-        # options.page_load_strategy = 'eager'
-        options.add_argument("--disable-extensions")
-        options.add_argument("--disable-logging")
-        options.add_argument("--disable-crash-reporter")
-        options.add_argument("--disable-background-networking")
-        options.add_argument("--remote-debugging-port=9222")
+        # options.add_argument("--disable-video")
+        # # options.page_load_strategy = 'eager'
+        # options.add_argument("--disable-extensions")
+        # options.add_argument("--disable-logging")
+        # options.add_argument("--disable-crash-reporter")
+        # options.add_argument("--disable-background-networking")
+        # options.add_argument("--remote-debugging-port=9222")
 
 
         # Ignore specific graphics and media errors
@@ -555,7 +555,7 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         driver.get(url)
         time.sleep(10)
         # Wait for initial page load
-        # wait_for_page_load(driver, timeout)
+        wait_for_page_load(driver, timeout)
 
         # Handle dynamic content
         wait_for_dynamic_elements(driver)
