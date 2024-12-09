@@ -551,9 +551,9 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         options.add_experimental_option("prefs", prefs)
         driver = webdriver.Chrome(service=Service(ChromeDriverManager("120.0.6099.224").install()),options=options)
         
-        driver.set_page_load_timeout(timeout)
+        # driver.set_page_load_timeout(timeout)
         driver.get(url)
-        time.sleep(5)
+        time.sleep(10)
         # Wait for initial page load
         # wait_for_page_load(driver, timeout)
 
