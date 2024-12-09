@@ -548,13 +548,14 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
             "profile.default_content_setting_values.media_stream": 2
         }
         options.add_experimental_option("prefs", prefs)
-
-        # Rest of your existing code remains the same
-        # service = Service()
-        # service = Service(ChromeDriverManager().install())
-        # Use undetected_chromedriver (uc) and webdriver_manager to handle ChromeDriver
-        driver = uc.Chrome(options=options)
-
+        chrome_driver_path = ChromeDriverManager().install()
+        
+        # Create service with the explicit path
+        service = Service(chrome_driver_path)
+        
+        # Use the service parameter in Chrome initialization
+        driver = uc.Chrome(service=service, options=options)
+        
         driver.set_page_load_timeout(timeout)
         driver.get(url)
 
