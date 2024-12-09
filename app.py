@@ -513,7 +513,7 @@ def clean_extracted_text(text: str) -> str:
 def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str]]:
     driver = None
     try:
-        options = uc.ChromeOptions()
+        options = webdriver.ChromeOptions()
         # Enhanced GPU and rendering configuration
         options.add_argument("--start-maximized")
         options.add_argument("--no-sandbox")
@@ -548,13 +548,7 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
             "profile.default_content_setting_values.media_stream": 2
         }
         options.add_experimental_option("prefs", prefs)
-        chrome_driver_path = ChromeDriverManager().install()
-        
-        # Create service with the explicit path
-        service = Service(chrome_driver_path)
-        
-        # Use the service parameter in Chrome initialization
-        driver = uc.Chrome(service=service, options=options)
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),options=options)
         
         driver.set_page_load_timeout(timeout)
         driver.get(url)
