@@ -549,7 +549,7 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
             "profile.default_content_setting_values.media_stream": 2
         }
         options.add_experimental_option("prefs", prefs)
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager(url="https://chromedriver.storage.goo",driver_version="113.0.5672.24").install()),options=options)
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager(url="https://chromedriver.storage.googleapis.com",driver_version="113.0.5672.24").install()),options=options)
         
         # driver.set_page_load_timeout(timeout)
         driver.get(url)
