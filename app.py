@@ -422,8 +422,11 @@ def handle_shadow_dom(driver):
 
 
 
+import re
+from selenium.webdriver.common.by import By
+
 def find_main_content(driver) -> str:
-    """Enhanced main content detection"""
+    """Enhanced main content detection, limiting to 10,000 words"""
     try:
         content_scores = []
         
@@ -442,7 +445,7 @@ def find_main_content(driver) -> str:
             elements = driver.find_elements(By.CSS_SELECTOR, selector)
             for element in elements:
                 if element.is_displayed():
-                    text = element.text
+                    text = element.text.strip()
                     html = element.get_attribute('outerHTML')
                     
                     # Calculate content score based on multiple factors
@@ -466,14 +469,28 @@ def find_main_content(driver) -> str:
         if content_scores:
             # Get element with highest score
             best_element = max(content_scores, key=lambda x: x[1])[0]
-            return best_element.text
+            main_content = best_element.text
             
+            # Limit to 10,000 words
+            word_limit = 10000
+            words = main_content.split()
+            if len(words) > word_limit:
+                main_content = ' '.join(words[:word_limit])
+            
+            return main_content
+        
         # Fallback: use your original method
-        return driver.find_element(By.TAG_NAME, "body").text
+        body_content = driver.find_element(By.TAG_NAME, "body").text
+        words = body_content.split()
+        if len(words) > word_limit:
+            body_content = ' '.join(words[:word_limit])
+        
+        return body_content
         
     except Exception as e:
         print(f"Error finding main content: {e}")
         return ""
+
 
 def clean_extracted_text(text: str) -> str:
     """Enhanced text cleaning with more patterns"""
