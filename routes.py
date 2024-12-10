@@ -107,7 +107,7 @@ def newsletter(data):
     response = client.chat.completions.create(
         model=GPTModel,
         temperature=0.3,
-        max_tokens=1000,
+        max_tokens=2000,
         messages=[
             {"role": "system", "content": context},
             # {"role": "user", "content": data}
