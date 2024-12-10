@@ -308,7 +308,7 @@ def scrap_web(url: str) -> Optional[str]:
         print(f"For URL: {url}. Error: {e}. Attempting to scrape with Selenium.")
         return scrape_from_selenium(url)
     
-def wait_for_page_load(driver, timeout=20):
+def wait_for_page_load(driver, timeout=10):
     """ Enhanced wait for page load with additional checks """
     try:
         WebDriverWait(driver, timeout).until(
@@ -511,7 +511,7 @@ def clean_extracted_text(text: str) -> str:
     return text.strip()
 
 
-def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str]]:
+def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Optional[str]]:
     driver = None
     try:
         options = Options()
@@ -552,7 +552,7 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         # options.add_experimental_option("prefs", prefs)
         driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="120.0.6099.10900").install()), options=options)
         
-        driver.set_page_load_timeout(timeout)
+        # driver.set_page_load_timeout(timeout)
         driver.get(url)
         time.sleep(3)
         # Wait for initial page load
