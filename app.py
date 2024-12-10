@@ -552,9 +552,9 @@ def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Op
         # options.add_experimental_option("prefs", prefs)
         driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="120.0.6099.10900").install()), options=options)
         
-        # driver.set_page_load_timeout(timeout)
+        driver.set_page_load_timeout(timeout)
         driver.get(url)
-        time.sleep(10)
+        time.sleep(3)
         # Wait for initial page load
         wait_for_page_load(driver, timeout)
 
@@ -2215,7 +2215,7 @@ def main():
                         st.session_state['downloaded'] = False  # Reset the download state
                         st.session_state.file_uploader_key += 1  # Increment the file uploader key to reset the uploader
                         process_button_placeholder.empty()  # This removes the button after click
-                        st.experimental_rerun() 
+                        st.rerun() 
 
 if __name__ == "__main__":
     main()
