@@ -18,6 +18,10 @@ import traceback
 from selenium import webdriver
 from typing import Optional, Tuple
 from selenium.webdriver.chrome.options import Options
+import asyncio
+import aiohttp
+import pandas as pd
+import streamlit as st
 import docx2txt
 from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
@@ -2103,35 +2107,47 @@ def main():
                         st.warning("Please select a state before clicking 'Summarize'.")
                 
         elif app_mode == "Newsletter Quotes":
+
+            async def fetch(session, url):
+                try:
+                    async with session.get(url) as response:
+                        return await response.text()
+                except Exception as e:
+                    st.warning(f"Failed to scrape content from {url}: {e}")
+                    return None
+
+            async def scrap_web_async(links):
+                async with aiohttp.ClientSession() as session:
+                    tasks = [fetch(session, link) for link in links]
+                    return await asyncio.gather(*tasks)
+
             def process_data(uploaded_file):
                 df = pd.read_excel(uploaded_file, header=None)
                 df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
                 results = list(filter(None, df.apply(process_row, axis=1)))
-
                 all_items = []
+
+                links = [item['link'] for item in results]
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                web_contents = loop.run_until_complete(scrap_web_async(links))
+
                 for idx, item in enumerate(results):
                     try:
-                        # Attempt to scrape web content
-                        web_content = scrap_web(item['link'])
+                        web_content = web_contents[idx]
                         if web_content is None:
-                            st.warning(f"Failed to scrape content from {item['link']}")
                             continue
-
                         item['web_content'] = web_content
 
-                        # Attempt to get newsletter data and background
                         newsletter_topic = get_topic_newsletter(item['web_content'])
                         newsletter_data = newsletter(item['web_content'])
                         newsletter_background = get_newsletter_background(item['web_content'])
 
                         if newsletter_data is None:
-                            st.warning(f"Failed to process newsletter data for {item['link']}")
                             continue
 
-                        # Process data and extract details
                         people_quotes = newsletter_data['newsletter']['people']
                         background = newsletter_background.get('background', 'No background available')
-
                         quoted = newsletter_data.get('quoted', 'No quotes available')
                         extracted_topic = newsletter_topic.get('topic', 'No topic found from web content')
                         extracted_people_quotes = [
@@ -2150,19 +2166,17 @@ def main():
                             'quoted': quoted,
                             'link': item['link'],
                             'date': formatted_date,
-                            'branch_head':item['branch_head']
+                            'branch_head': item['branch_head']
                         }
 
                         all_items.append(data)
-
                     except KeyError as e:
                         st.warning(f"Error processing data for {item['link']}: Missing key {e}. Skipping...")
-                        continue
                     except Exception as e:
                         st.warning(f"An error occurred with {item['link']}: {e}. Skipping...")
-                        continue
 
                 return all_items
+
 
 
             # Title of the app
