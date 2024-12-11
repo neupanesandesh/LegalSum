@@ -39,9 +39,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
-
 nltk.download('punkt_tab')
-# Call the function at the start of the script
 
 def ensure_nltk_data():
     """Check if required NLTK data is present, and download it if necessary."""
