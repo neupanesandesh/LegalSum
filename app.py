@@ -18,6 +18,10 @@ import traceback
 from selenium import webdriver
 from typing import Optional, Tuple
 from selenium.webdriver.chrome.options import Options
+import asyncio
+import aiohttp
+import pandas as pd
+import streamlit as st
 import docx2txt
 from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
@@ -308,7 +312,7 @@ def scrap_web(url: str) -> Optional[str]:
         print(f"For URL: {url}. Error: {e}. Attempting to scrape with Selenium.")
         return scrape_from_selenium(url)
     
-def wait_for_page_load(driver, timeout=20):
+def wait_for_page_load(driver, timeout=10):
     """ Enhanced wait for page load with additional checks """
     try:
         WebDriverWait(driver, timeout).until(
@@ -419,7 +423,7 @@ def handle_shadow_dom(driver):
 
 
 def find_main_content(driver) -> str:
-    """Enhanced main content detection"""
+    """Enhanced main content detection, limiting to 10,000 words"""
     try:
         content_scores = []
         
@@ -438,7 +442,7 @@ def find_main_content(driver) -> str:
             elements = driver.find_elements(By.CSS_SELECTOR, selector)
             for element in elements:
                 if element.is_displayed():
-                    text = element.text
+                    text = element.text.strip()
                     html = element.get_attribute('outerHTML')
                     
                     # Calculate content score based on multiple factors
@@ -462,14 +466,28 @@ def find_main_content(driver) -> str:
         if content_scores:
             # Get element with highest score
             best_element = max(content_scores, key=lambda x: x[1])[0]
-            return best_element.text
+            main_content = best_element.text
             
+            # Limit to 10,000 words
+            word_limit = 10000
+            words = main_content.split()
+            if len(words) > word_limit:
+                main_content = ' '.join(words[:word_limit])
+            
+            return main_content
+        
         # Fallback: use your original method
-        return driver.find_element(By.TAG_NAME, "body").text
+        body_content = driver.find_element(By.TAG_NAME, "body").text
+        words = body_content.split()
+        if len(words) > word_limit:
+            body_content = ' '.join(words[:word_limit])
+        
+        return body_content
         
     except Exception as e:
         print(f"Error finding main content: {e}")
         return ""
+
 
 def clean_extracted_text(text: str) -> str:
     """Enhanced text cleaning with more patterns"""
@@ -511,50 +529,50 @@ def clean_extracted_text(text: str) -> str:
     return text.strip()
 
 
-def scrape_from_selenium(url: str, timeout: int = 20) -> Tuple[Optional[str], Optional[str]]:
+def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Optional[str]]:
     driver = None
     try:
         options = Options()
         # options.binary_location = "/usr/bin/chromium-browser"
         # Enhanced GPU and rendering configuration
-        # options.add_argument("--start-maximized")
+        options.add_argument("--start-maximized")
         options.add_argument("--no-sandbox")
         options.add_argument("--headless")
         # options.headless=True
         options.add_argument("--disable-dev-shm-usage")
-        # options.add_argument('--disable-infobars')
+        options.add_argument('--disable-infobars')
         options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
         # options.add_argument("--headless=new")
         
-        # # More robust graphics rendering fallback
-        # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
-        # options.add_argument("--disable-software-rasterizer")
-        # options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
-        # options.add_argument("--enable-unsafe-swiftshader")
-        # # Media and audio configuration
-        # options.add_argument("--disable-audio-output")
-        # options.add_argument("--disable-video")
-        # # options.page_load_strategy = 'eager'
-        # options.add_argument("--disable-extensions")
-        # options.add_argument("--disable-logging")
-        # options.add_argument("--disable-crash-reporter")
-        # options.add_argument("--disable-background-networking")
-        # options.add_argument("--remote-debugging-port=9222")
+        # More robust graphics rendering fallback
+        options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
+        options.add_argument("--disable-software-rasterizer")
+        options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
+        options.add_argument("--enable-unsafe-swiftshader")
+        # Media and audio configuration
+        options.add_argument("--disable-audio-output")
+        options.add_argument("--disable-video")
+        # options.page_load_strategy = 'eager'
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-logging")
+        options.add_argument("--disable-crash-reporter")
+        options.add_argument("--disable-background-networking")
+        options.add_argument("--remote-debugging-port=9222")
 
 
-        # # Ignore specific graphics and media errors
-        # options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        # Ignore specific graphics and media errors
+        options.add_experimental_option('excludeSwitches', ['enable-logging'])
         
-        # prefs = {
-        #     "profile.managed_default_content_settings.images": 2,
-        #     "profile.default_content_setting_values.media_stream": 2
-        # }
-        # options.add_experimental_option("prefs", prefs)
+        prefs = {
+            "profile.managed_default_content_settings.images": 2,
+            "profile.default_content_setting_values.media_stream": 2
+        }
+        options.add_experimental_option("prefs", prefs)
         driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="120.0.6099.10900").install()), options=options)
         
         # driver.set_page_load_timeout(timeout)
         driver.get(url)
-        time.sleep(10)
+        time.sleep(3)
         # Wait for initial page load
         wait_for_page_load(driver, timeout)
 
@@ -2103,35 +2121,47 @@ def main():
                         st.warning("Please select a state before clicking 'Summarize'.")
                 
         elif app_mode == "Newsletter Quotes":
+
+            async def fetch(session, url):
+                try:
+                    async with session.get(url) as response:
+                        return await response.text()
+                except Exception as e:
+                    st.warning(f"Failed to scrape content from {url}: {e}")
+                    return None
+
+            async def scrap_web_async(links):
+                async with aiohttp.ClientSession() as session:
+                    tasks = [fetch(session, link) for link in links]
+                    return await asyncio.gather(*tasks)
+
             def process_data(uploaded_file):
                 df = pd.read_excel(uploaded_file, header=None)
                 df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
                 results = list(filter(None, df.apply(process_row, axis=1)))
-
                 all_items = []
+
+                links = [item['link'] for item in results]
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                web_contents = loop.run_until_complete(scrap_web_async(links))
+
                 for idx, item in enumerate(results):
                     try:
-                        # Attempt to scrape web content
-                        web_content = scrap_web(item['link'])
+                        web_content = web_contents[idx]
                         if web_content is None:
-                            st.warning(f"Failed to scrape content from {item['link']}")
                             continue
-
                         item['web_content'] = web_content
 
-                        # Attempt to get newsletter data and background
                         newsletter_topic = get_topic_newsletter(item['web_content'])
                         newsletter_data = newsletter(item['web_content'])
                         newsletter_background = get_newsletter_background(item['web_content'])
 
                         if newsletter_data is None:
-                            st.warning(f"Failed to process newsletter data for {item['link']}")
                             continue
 
-                        # Process data and extract details
                         people_quotes = newsletter_data['newsletter']['people']
                         background = newsletter_background.get('background', 'No background available')
-
                         quoted = newsletter_data.get('quoted', 'No quotes available')
                         extracted_topic = newsletter_topic.get('topic', 'No topic found from web content')
                         extracted_people_quotes = [
@@ -2150,19 +2180,17 @@ def main():
                             'quoted': quoted,
                             'link': item['link'],
                             'date': formatted_date,
-                            'branch_head':item['branch_head']
+                            'branch_head': item['branch_head']
                         }
 
                         all_items.append(data)
-
                     except KeyError as e:
                         st.warning(f"Error processing data for {item['link']}: Missing key {e}. Skipping...")
-                        continue
                     except Exception as e:
                         st.warning(f"An error occurred with {item['link']}: {e}. Skipping...")
-                        continue
 
                 return all_items
+
 
 
             # Title of the app
@@ -2215,7 +2243,7 @@ def main():
                         st.session_state['downloaded'] = False  # Reset the download state
                         st.session_state.file_uploader_key += 1  # Increment the file uploader key to reset the uploader
                         process_button_placeholder.empty()  # This removes the button after click
-                        st.experimental_rerun() 
+                        st.rerun() 
 
 if __name__ == "__main__":
     main()
