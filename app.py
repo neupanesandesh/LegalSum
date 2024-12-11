@@ -2205,7 +2205,7 @@ def main():
                 results = list(filter(None, df.apply(process_row, axis=1)))
                 
                 # Use concurrent futures for parallel processing
-                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
                     # Map processing function to all items
                     processed_items = list(executor.map(process_single_item, results))
                 
