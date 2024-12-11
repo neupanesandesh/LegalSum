@@ -23,6 +23,8 @@ import aiohttp
 import pandas as pd
 import streamlit as st
 import docx2txt
+import concurrent.futures
+from typing import List, Dict, Any
 from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
 from selenium.common.exceptions import WebDriverException, TimeoutException
@@ -2123,58 +2125,93 @@ def main():
                         st.warning("Please select a state before clicking 'Summarize'.")
                 
         elif app_mode == "Newsletter Quotes":
-            def process_data(uploaded_file):
+            def process_single_item(item: Dict[str, Any]) -> Dict[str, Any]:
+                """
+                Process a single item with error handling and web scraping.
+                
+                Args:
+                    item (Dict[str, Any]): Dictionary containing item details
+                
+                Returns:
+                    Dict[str, Any]: Processed data or None if processing fails
+                """
+                try:
+                    # Attempt to scrape web content
+                    web_content = scrap_web(item['link'])
+                    if web_content is None:
+                        st.warning(f"Failed to scrape content from {item['link']}")
+                        return None
+
+                    # Add web content to the item
+                    item['web_content'] = web_content
+
+                    # Extract newsletter information
+                    newsletter_topic = get_topic_newsletter(web_content)
+                    newsletter_data = newsletter(web_content)
+                    newsletter_background = get_newsletter_background(web_content)
+
+                    if newsletter_data is None:
+                        return None
+
+                    # Process people quotes
+                    people_quotes = newsletter_data['newsletter']['people']
+                    background = newsletter_background.get('background', 'No background available')
+                    quoted = newsletter_data.get('quoted', 'No quotes available')
+                    extracted_topic = newsletter_topic.get('topic', 'No topic found from web content')
+                    
+                    extracted_people_quotes = [
+                        {
+                            'name': person['name'],
+                            'quote': '\n'.join([f'"{quote}"' for quote in person["quote"]])
+                        } for person in people_quotes
+                    ]
+
+                    # Format date
+                    formatted_date = format_date_and_info(item['date'])
+
+                    # Compile final data
+                    return {
+                        'topic': extracted_topic,
+                        'background': background,
+                        'people_quotes': extracted_people_quotes,
+                        'quoted': quoted,
+                        'link': item['link'],
+                        'date': formatted_date,
+                        'branch_head': item['branch_head']
+                    }
+                
+                except KeyError as e:
+                    st.warning(f"Error processing data for {item['link']}: Missing key {e}. Skipping...")
+                    return None
+                except Exception as e:
+                    st.warning(f"An error occurred with {item['link']}: {e}. Skipping...")
+                    return None
+
+            def process_data(uploaded_file) -> List[Dict[str, Any]]:
+                """
+                Process data from uploaded file with concurrent web scraping.
+                
+                Args:
+                    uploaded_file: Excel file with data to process
+                
+                Returns:
+                    List[Dict[str, Any]]: Processed data items
+                """
+                # Read Excel file
                 df = pd.read_excel(uploaded_file, header=None)
                 df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
+                
+                # Filter and prepare items
                 results = list(filter(None, df.apply(process_row, axis=1)))
-                all_items = []
-                for idx, item in enumerate(results):
-                    try:
-                        # Attempt to scrape web content
-                        web_content = scrap_web(item['link'])
-                        if web_content is None:
-                            st.warning(f"Failed to scrape content from {item['link']}")
-                            continue
-
-                        item['web_content'] = web_content
-
-
-                        newsletter_topic = get_topic_newsletter(item['web_content'])
-                        newsletter_data = newsletter(item['web_content'])
-                        newsletter_background = get_newsletter_background(item['web_content'])
-
-                        if newsletter_data is None:
-                            continue
-
-                        people_quotes = newsletter_data['newsletter']['people']
-                        background = newsletter_background.get('background', 'No background available')
-                        quoted = newsletter_data.get('quoted', 'No quotes available')
-                        extracted_topic = newsletter_topic.get('topic', 'No topic found from web content')
-                        extracted_people_quotes = [
-                            {
-                                'name': person['name'],
-                                'quote': '\n'.join([f'"{quote}"' for quote in person["quote"]])
-                            } for person in people_quotes
-                        ]
-
-                        formatted_date = format_date_and_info(item['date'])
-
-                        data = {
-                            'topic': extracted_topic,
-                            'background': background,
-                            'people_quotes': extracted_people_quotes,
-                            'quoted': quoted,
-                            'link': item['link'],
-                            'date': formatted_date,
-                            'branch_head': item['branch_head']
-                        }
-
-                        all_items.append(data)
-                    except KeyError as e:
-                        st.warning(f"Error processing data for {item['link']}: Missing key {e}. Skipping...")
-                    except Exception as e:
-                        st.warning(f"An error occurred with {item['link']}: {e}. Skipping...")
-
+                
+                # Use concurrent futures for parallel processing
+                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                    # Map processing function to all items
+                    processed_items = list(executor.map(process_single_item, results))
+                
+                # Filter out None results (failed processing)
+                all_items = [item for item in processed_items if item is not None]
+                
                 return all_items
 
 
