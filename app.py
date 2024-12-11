@@ -39,6 +39,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
+nltk.download('punkt_tab')
 
 def ensure_nltk_data():
     """Check if required NLTK data is present, and download it if necessary."""
@@ -48,9 +49,10 @@ def ensure_nltk_data():
     except LookupError:
         # Data is not available, so download it
         st.info("Downloading NLTK 'punkt' data...")
-        nltk.download('punkt')
+        nltk.download('punkt_tab')
 
 # Call the function at the start of the script
+# ensure_nltk_data()
 ensure_nltk_data()
 
 working_driver = None
@@ -2121,73 +2123,52 @@ def main():
                         st.warning("Please select a state before clicking 'Summarize'.")
                 
         elif app_mode == "Newsletter Quotes":
-
-            async def fetch(session, url):
-                try:
-                    async with session.get(url) as response:
-                        return await response.text()
-                except Exception as e:
-                    st.warning(f"Failed to scrape content from {url}: {e}")
-                    return None
-
-            async def scrap_web_async(links):
-                async with aiohttp.ClientSession() as session:
-                    tasks = [fetch(session, link) for link in links]
-                    return await asyncio.gather(*tasks)
-
             def process_data(uploaded_file):
                 df = pd.read_excel(uploaded_file, header=None)
                 df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
                 results = list(filter(None, df.apply(process_row, axis=1)))
+
                 all_items = []
-
-                links = [item['link'] for item in results]
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                web_contents = loop.run_until_complete(scrap_web_async(links))
-
                 for idx, item in enumerate(results):
+                    web_content = scrap_web(item['link'])
+                    if web_content is None:
+                        st.warning(f"Failed to scrape content from {item['link']}")
+                        continue
+                    item['web_content'] = web_content
+                    newsletter_topic = get_topic_newsletter(item['web_content'])
+                    newsletter_data = newsletter(item['web_content'])
+                    newsletter_background = get_newsletter_background(item['web_content'])
+                    
+
+                    if newsletter_data is None:
+                        st.warning(f"Failed to process newsletter data for {item['link']}")
+                        continue
+
                     try:
-                        web_content = web_contents[idx]
-                        if web_content is None:
-                            continue
-                        item['web_content'] = web_content
-
-                        newsletter_topic = get_topic_newsletter(item['web_content'])
-                        newsletter_data = newsletter(item['web_content'])
-                        newsletter_background = get_newsletter_background(item['web_content'])
-
-                        if newsletter_data is None:
-                            continue
-
                         people_quotes = newsletter_data['newsletter']['people']
                         background = newsletter_background.get('background', 'No background available')
+
                         quoted = newsletter_data.get('quoted', 'No quotes available')
                         extracted_topic = newsletter_topic.get('topic', 'No topic found from web content')
-                        extracted_people_quotes = [
-                            {
-                                'name': person['name'],
-                                'quote': '\n'.join([f'"{quote}"' for quote in person["quote"]])
-                            } for person in people_quotes
-                        ]
+                        extracted_people_quotes = [{'name': person['name'],'quote': '\n'.join([f'"{quote}"' for quote in person["quote"]])}for person in people_quotes]
 
                         formatted_date = format_date_and_info(item['date'])
-
+                        
                         data = {
                             'topic': extracted_topic,
                             'background': background,
                             'people_quotes': extracted_people_quotes,
                             'quoted': quoted,
                             'link': item['link'],
-                            'date': formatted_date,
-                            'branch_head': item['branch_head']
+                            'date': formatted_date
                         }
 
                         all_items.append(data)
+
                     except KeyError as e:
-                        st.warning(f"Error processing data for {item['link']}: Missing key {e}. Skipping...")
+                        print(f"Error processing data for {item['info']}: Missing key {e}")
                     except Exception as e:
-                        st.warning(f"An error occurred with {item['link']}: {e}. Skipping...")
+                        print(f"The webpage is temporarily down or blocks extraction, {item['info']}: {e}")
 
                 return all_items
 
