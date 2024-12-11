@@ -544,7 +544,7 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
         # options.add_argument("--headless=new")
         
-        # # More robust graphics rendering fallback
+        # More robust graphics rendering fallback
         options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
         options.add_argument("--disable-software-rasterizer")
         options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
@@ -552,7 +552,7 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         # Media and audio configuration
         options.add_argument("--disable-audio-output")
         options.add_argument("--disable-video")
-        options.page_load_strategy = 'eager'
+        # options.page_load_strategy = 'eager'
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-logging")
         options.add_argument("--disable-crash-reporter")
@@ -560,7 +560,7 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         options.add_argument("--remote-debugging-port=9222")
 
 
-        # # Ignore specific graphics and media errors
+        # Ignore specific graphics and media errors
         options.add_experimental_option('excludeSwitches', ['enable-logging'])
         
         prefs = {
@@ -583,11 +583,11 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
 
         # Extract content from all possible sources
         main_content = find_main_content(driver)
-        # frame_content = detect_and_handle_frames(driver)
-        # shadow_content = handle_shadow_dom(driver)
+        frame_content = detect_and_handle_frames(driver)
+        shadow_content = handle_shadow_dom(driver)
 
         # Combine and clean content
-        all_content = ' '.join(filter(None, [main_content]))
+        all_content = ' '.join(filter(None, [main_content, frame_content, shadow_content]))
         cleaned_content = clean_extracted_text(all_content)
 
         # Validate content
