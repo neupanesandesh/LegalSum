@@ -574,9 +574,9 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         options = Options()
         # options.binary_location = "/usr/bin/chromium-browser"
         # Enhanced GPU and rendering configuration
-        options.add_argument("--start-maximized")
-        options.add_argument("--no-sandbox")
         options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--start-maximized")
         # options.headless=True
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument('--disable-infobars')
@@ -608,7 +608,7 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         }
         options.add_experimental_option("prefs", prefs)
         # service = Service(executable_path=r"./chromedriver.exe")
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="120.0.6099.109").install()), options=options)
+        driver = webdriver.Chrome(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
         
         # driver.set_page_load_timeout(timeout)
         driver.get(url)
