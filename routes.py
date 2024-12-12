@@ -181,7 +181,7 @@ def get_newsletter_background(data):
     response = client.chat.completions.create(
         model=GPTModel,
         temperature=0.0,
-        max_tokens=600,
+        max_tokens=1000,
         messages=[
             {"role": "system", "content": context},
             # {"role": "user", "content": data}
