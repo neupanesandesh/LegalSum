@@ -9,4 +9,4 @@ fonts-liberation
 xvfb
 chromium
 chromium-driver
-google-chrome-stable
+
