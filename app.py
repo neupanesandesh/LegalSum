@@ -2170,10 +2170,10 @@ def main():
                     st.warning(f"Failed to scrape content from {url}: {e}")
                     return None
 
-            async def scrap_web_async(links):
-                async with aiohttp.ClientSession() as session:
-                    tasks = [fetch(session, link) for link in links]
-                    return await asyncio.gather(*tasks)
+            # async def scrap_web_async(links):
+            #     async with aiohttp.ClientSession() as session:
+            #         tasks = [fetch(session, link) for link in links]
+            #         return await asyncio.gather(*tasks)
 
             def process_data(uploaded_file):
                 df = pd.read_excel(uploaded_file, engine='openpyxl')
@@ -2184,7 +2184,7 @@ def main():
                 links = [item['link'] for item in results]
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                web_contents = loop.run_until_complete(scrap_web_async(links))
+                web_contents = loop.run_until_complete(scrap_web(links))
 
                 for idx, item in enumerate(results):
                     try:
