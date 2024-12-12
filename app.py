@@ -18,6 +18,7 @@ import traceback
 from selenium import webdriver
 from typing import Optional, Tuple
 from selenium.webdriver.chrome.options import Options
+from chromedriver_py import binary_path
 from selenium.webdriver.chrome.service import Service as ChromiumService
 import asyncio
 import aiohttp
@@ -608,8 +609,8 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
             "profile.default_content_setting_values.media_stream": 2
         }
         options.add_experimental_option("prefs", prefs)
-        # service = Service(executable_path=r"./chromedriver.exe")
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="120.0.6099.224").install()), options=options)
+        svc = webdriver.ChromeService(executable_path=binary_path)
+        driver = webdriver.Chrome(service=svc, options=options)
         
         # driver.set_page_load_timeout(timeout)
         driver.get(url)
