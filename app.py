@@ -18,6 +18,7 @@ import traceback
 from selenium import webdriver
 from typing import Optional, Tuple
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service as ChromiumService
 import asyncio
 import aiohttp
 import pandas as pd
@@ -608,7 +609,7 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         }
         options.add_experimental_option("prefs", prefs)
         # service = Service(executable_path=r"./chromedriver.exe")
-        driver = webdriver.Chrome(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
+        driver = webdriver.Chrome(service=ChromiumService(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()))
         
         # driver.set_page_load_timeout(timeout)
         driver.get(url)
