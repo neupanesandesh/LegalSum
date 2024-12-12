@@ -40,7 +40,7 @@ from dotenv import load_dotenv
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
 
-nltk.download('punkt_tab')
+# nltk.download('punkt_tab')
 # Call the function at the start of the script
 
 def ensure_nltk_data():
@@ -55,7 +55,7 @@ def ensure_nltk_data():
 
 # Call the function at the start of the script
 # ensure_nltk_data()
-ensure_nltk_data()
+# ensure_nltk_data()
 
 working_driver = None
 if 'email_sent_flag' not in st.session_state:
@@ -145,33 +145,37 @@ def is_main_content_container(element, text_length_threshold=100) -> bool:
     
     return False
 
-def scroll_page_dynamically(driver, pause_time=1.0, max_scroll_attempts=10):
+def scroll_page_dynamically(driver, pause_time=1.0, max_scroll_attempts=1, min_height_change=100):
     """
-    Scrolls the page dynamically, stopping when the page stops loading new content 
-    or when the maximum number of scroll attempts is reached.
+    Scroll the page dynamically, stopping once new content is no longer being loaded.
+    
+    Parameters:
+    - driver: Selenium WebDriver instance.
+    - pause_time: Time to wait between scrolls (in seconds).
+    - max_scroll_attempts: Maximum number of consecutive attempts with no significant new content before stopping.
+    - min_height_change: Minimum change in height to consider as new content being loaded.
     """
     last_height = driver.execute_script("return document.body.scrollHeight")
-    scroll_attempts = 0
+    scroll_attempts = 0  # Counter for consecutive failed attempts to load new content
 
     while scroll_attempts < max_scroll_attempts:
-        # Scroll down to the bottom of the page
+        # Scroll to the bottom of the page
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(pause_time)  # Wait for potential new content to load
         
-        # Wait for the page to load new content
-        time.sleep(pause_time)
-        
-        # Check if the page height has changed
+        # Check the new height
         new_height = driver.execute_script("return document.body.scrollHeight")
-
-        if new_height == last_height:
-            # If the height hasn't changed, increment the scroll attempt count
-            scroll_attempts += 1
+        
+        # Check if new content is loaded meaningfully
+        if new_height - last_height < min_height_change:
+            scroll_attempts += 1  # Increment attempts if no meaningful change
         else:
-            # Reset attempts if new content is loaded
-            scroll_attempts = 0
-            last_height = new_height
+            scroll_attempts = 0  # Reset attempts if significant new content is found
+        
+        # Update last height for the next iteration
+        last_height = new_height
 
-    # Return the final height
+    print("Scrolling completed. Final height:", last_height)
     return last_height
 
 
