@@ -41,7 +41,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
-nltk.download('punkt_tab')
+# nltk.download('punkt_tab')
 
 def ensure_nltk_data():
     """Check if required NLTK data is present, and download it if necessary."""
@@ -50,12 +50,12 @@ def ensure_nltk_data():
         find('tokenizers/punkt')
     except LookupError:
         # Data is not available, so download it
-        st.info("Downloading NLTK 'punkt' data...")
+        # st.info("Downloading NLTK 'punkt' data...")
         nltk.download('punkt_tab')
 
 # Call the function at the start of the script
 # ensure_nltk_data()
-ensure_nltk_data()
+# ensure_nltk_data()
 
 working_driver = None
 if 'email_sent_flag' not in st.session_state:
