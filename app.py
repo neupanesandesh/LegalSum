@@ -39,9 +39,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
-
 nltk.download('punkt_tab')
-# Call the function at the start of the script
 
 def ensure_nltk_data():
     """Check if required NLTK data is present, and download it if necessary."""
@@ -50,7 +48,7 @@ def ensure_nltk_data():
         find('tokenizers/punkt')
     except LookupError:
         # Data is not available, so download it
-        st.info("Downloading NLTK 'punkt' data...")
+        # st.info("Downloading NLTK 'punkt' data...")
         nltk.download('punkt_tab')
 
 # Call the function at the start of the script
@@ -2126,23 +2124,20 @@ def main():
                 
         elif app_mode == "Newsletter Quotes":
             def process_data(uploaded_file):
-                df = pd.read_excel(uploaded_file, engine='openpyxl')
+                df = pd.read_excel(uploaded_file, header=None)
                 df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
                 results = list(filter(None, df.apply(process_row, axis=1)))
                 all_items = []
-
-                # links = [item['link'] for item in results]
-                # loop = asyncio.new_event_loop()
-                # asyncio.set_event_loop(loop)
-
-                for item in enumerate(results):
+                for idx, item in enumerate(results):
                     try:
-                        web_content = scrap_web(str(item))
-                        # web_content = web_contents[idx]
+                        # Attempt to scrape web content
+                        web_content = scrap_web(item['link'])
                         if web_content is None:
                             st.warning(f"Failed to scrape content from {item['link']}")
                             continue
+
                         item['web_content'] = web_content
+
 
                         newsletter_topic = get_topic_newsletter(item['web_content'])
                         newsletter_data = newsletter(item['web_content'])
