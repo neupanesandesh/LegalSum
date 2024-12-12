@@ -613,7 +613,7 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         
         # driver.set_page_load_timeout(timeout)
         driver.get(url)
-        time.sleep(3)
+        time.sleep(5)
         # Wait for initial page load
         wait_for_page_load(driver, timeout)
 
@@ -2162,20 +2162,6 @@ def main():
                         st.warning("Please select a state before clicking 'Summarize'.")
                 
         elif app_mode == "Newsletter Quotes":
-
-            async def fetch(session, url):
-                try:
-                    async with session.get(url) as response:
-                        return await response.text()
-                except Exception as e:
-                    st.warning(f"Failed to scrape content from {url}: {e}")
-                    return None
-
-            async def scrap_web_async(links):
-                async with aiohttp.ClientSession() as session:
-                    tasks = [fetch(session, link) for link in links]
-                    return await asyncio.gather(*tasks)
-
             def process_data(uploaded_file):
                 df = pd.read_excel(uploaded_file, engine='openpyxl')
                 df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
@@ -2188,7 +2174,7 @@ def main():
 
                 for idx, item in enumerate(results):
                     try:
-                        web_content = scrap_web(item)
+                        web_content = scrap_web(str(item))
                         # web_content = web_contents[idx]
                         if web_content is None:
                             st.warning(f"Failed to scrape content from {item['link']}")
