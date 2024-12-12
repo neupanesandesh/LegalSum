@@ -2205,7 +2205,7 @@ def main():
                 results = list(filter(None, df.apply(process_row, axis=1)))
                 
                 # Use concurrent futures for parallel processing
-                with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=14) as executor:
                     # Map processing function to all items
                     processed_items = list(executor.map(process_single_item, results))
                 
@@ -2213,7 +2213,6 @@ def main():
                 all_items = [item for item in processed_items if item is not None]
                 
                 return all_items
-
 
 
             # Title of the app
