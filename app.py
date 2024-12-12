@@ -2184,7 +2184,7 @@ def main():
                 links = [item['link'] for item in results]
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                web_contents = loop.run_until_complete(scrap_web(links))
+                web_contents = scrap_web(links)
 
                 for idx, item in enumerate(results):
                     try:
