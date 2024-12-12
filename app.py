@@ -2141,7 +2141,7 @@ def main():
                     return await asyncio.gather(*tasks)
 
             def process_data(uploaded_file):
-                df = pd.read_excel(uploaded_file, header=None)
+                df = pd.read_excel(uploaded_file, engine='openpyxl')
                 df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
                 results = list(filter(None, df.apply(process_row, axis=1)))
                 all_items = []
