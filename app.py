@@ -537,29 +537,29 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         options = Options()
         # options.binary_location = "/usr/bin/chromium-browser"
         # Enhanced GPU and rendering configuration
-        options.add_argument("--start-maximized")
-        options.add_argument("--no-sandbox")
+        # options.add_argument("--start-maximized")
         options.add_argument("--headless")
-        # options.headless=True
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument('--disable-infobars')
-        options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
-        # options.add_argument("--headless=new")
+        options.add_argument("--no-sandbox")
+        # # options.headless=True
+        # options.add_argument("--disable-dev-shm-usage")
+        # options.add_argument('--disable-infobars')
+        # options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
+        # # options.add_argument("--headless=new")
         
-        # More robust graphics rendering fallback
-        options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
-        options.add_argument("--disable-software-rasterizer")
-        options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
-        options.add_argument("--enable-unsafe-swiftshader")
-        # Media and audio configuration
-        options.add_argument("--disable-audio-output")
-        options.add_argument("--disable-video")
-        # options.page_load_strategy = 'eager'
-        options.add_argument("--disable-extensions")
-        options.add_argument("--disable-logging")
-        options.add_argument("--disable-crash-reporter")
-        options.add_argument("--disable-background-networking")
-        options.add_argument("--remote-debugging-port=9222")
+        # # More robust graphics rendering fallback
+        # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
+        # options.add_argument("--disable-software-rasterizer")
+        # options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
+        # options.add_argument("--enable-unsafe-swiftshader")
+        # # Media and audio configuration
+        # options.add_argument("--disable-audio-output")
+        # options.add_argument("--disable-video")
+        # # options.page_load_strategy = 'eager'
+        # options.add_argument("--disable-extensions")
+        # options.add_argument("--disable-logging")
+        # options.add_argument("--disable-crash-reporter")
+        # options.add_argument("--disable-background-networking")
+        # options.add_argument("--remote-debugging-port=9222")
 
 
         # Ignore specific graphics and media errors
