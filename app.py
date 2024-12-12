@@ -18,8 +18,6 @@ import traceback
 from selenium import webdriver
 from typing import Optional, Tuple
 from selenium.webdriver.chrome.options import Options
-from chromedriver_py import binary_path
-from selenium.webdriver.chrome.service import Service as ChromiumService
 import asyncio
 import aiohttp
 import pandas as pd
@@ -42,7 +40,7 @@ from dotenv import load_dotenv
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
 
-# nltk.download('punkt_tab')
+nltk.download('punkt_tab')
 # Call the function at the start of the script
 
 def ensure_nltk_data():
@@ -52,12 +50,12 @@ def ensure_nltk_data():
         find('tokenizers/punkt')
     except LookupError:
         # Data is not available, so download it
-        # st.info("Downloading NLTK 'punkt' data...")
+        st.info("Downloading NLTK 'punkt' data...")
         nltk.download('punkt_tab')
 
 # Call the function at the start of the script
 # ensure_nltk_data()
-# ensure_nltk_data()
+ensure_nltk_data()
 
 working_driver = None
 if 'email_sent_flag' not in st.session_state:
@@ -146,41 +144,6 @@ def is_main_content_container(element, text_length_threshold=100) -> bool:
                 return True
     
     return False
-
-def scroll_page_dynamically(driver, pause_time=1.0, max_scroll_attempts=1, min_height_change=100):
-    """
-    Scroll the page dynamically, stopping once new content is no longer being loaded.
-    
-    Parameters:
-    - driver: Selenium WebDriver instance.
-    - pause_time: Time to wait between scrolls (in seconds).
-    - max_scroll_attempts: Maximum number of consecutive attempts with no significant new content before stopping.
-    - min_height_change: Minimum change in height to consider as new content being loaded.
-    """
-    last_height = driver.execute_script("return document.body.scrollHeight")
-    scroll_attempts = 0  # Counter for consecutive failed attempts to load new content
-
-    while scroll_attempts < max_scroll_attempts:
-        # Scroll to the bottom of the page
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(pause_time)  # Wait for potential new content to load
-        
-        # Check the new height
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        
-        # Check if new content is loaded meaningfully
-        if new_height - last_height < min_height_change:
-            scroll_attempts += 1  # Increment attempts if no meaningful change
-        else:
-            scroll_attempts = 0  # Reset attempts if significant new content is found
-        
-        # Update last height for the next iteration
-        last_height = new_height
-
-    print("Scrolling completed. Final height:", last_height)
-    return last_height
-
-
 
 def remove_unwanted_elements(soup: BeautifulSoup) -> None:
     """
@@ -576,9 +539,9 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         options = Options()
         # options.binary_location = "/usr/bin/chromium-browser"
         # Enhanced GPU and rendering configuration
-        options.add_argument("--headless")
-        options.add_argument("--no-sandbox")
         options.add_argument("--start-maximized")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--headless")
         # options.headless=True
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument('--disable-infobars')
@@ -609,18 +572,17 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
             "profile.default_content_setting_values.media_stream": 2
         }
         options.add_experimental_option("prefs", prefs)
-        svc = webdriver.ChromeService(executable_path=binary_path)
-        driver = webdriver.Chrome(service=svc, options=options)
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="120.0.6099.10900").install()), options=options)
         
         # driver.set_page_load_timeout(timeout)
         driver.get(url)
-        time.sleep(5)
+        time.sleep(3)
         # Wait for initial page load
         wait_for_page_load(driver, timeout)
 
         # Handle dynamic content
         wait_for_dynamic_elements(driver)
-        scroll_page_dynamically(driver)
+        # scroll_page_dynamically(driver)
         handle_popups(driver)
 
         # Extract content from all possible sources
@@ -2173,7 +2135,7 @@ def main():
                 # loop = asyncio.new_event_loop()
                 # asyncio.set_event_loop(loop)
 
-                for idx, item in enumerate(results):
+                for item in enumerate(results):
                     try:
                         web_content = scrap_web(str(item))
                         # web_content = web_contents[idx]
