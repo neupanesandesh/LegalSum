@@ -40,6 +40,9 @@ from dotenv import load_dotenv
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
 
+nltk.download('punkt_tab')
+# Call the function at the start of the script
+
 def ensure_nltk_data():
     """Check if required NLTK data is present, and download it if necessary."""
     try:
@@ -48,9 +51,10 @@ def ensure_nltk_data():
     except LookupError:
         # Data is not available, so download it
         st.info("Downloading NLTK 'punkt' data...")
-        nltk.download('punkt')
+        nltk.download('punkt_tab')
 
 # Call the function at the start of the script
+# ensure_nltk_data()
 ensure_nltk_data()
 
 working_driver = None
@@ -2248,5 +2252,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
