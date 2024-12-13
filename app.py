@@ -548,6 +548,9 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         options.add_argument("--disable-dev-shm-usage")
         options.page_load_strategy = 'eager'
         options.add_argument("--disable-features=OptimizationGuideModelDownloading")
+        options.add_argument('--blink-settings=imagesEnabled=false')
+        options.add_argument("--disable-audio-output")
+        options.add_argument("--disable-video")
         # options.add_argument('--disable-infobars')
         # # options.add_argument("--headless=new")
         
@@ -557,8 +560,6 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         # options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
         # options.add_argument("--enable-unsafe-swiftshader")
         # # Media and audio configuration
-        # options.add_argument("--disable-audio-output")
-        # options.add_argument("--disable-video")
         # options.add_argument("--disable-extensions")
         # options.add_argument("--disable-logging")
         # options.add_argument("--disable-crash-reporter")
@@ -569,11 +570,11 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         # # Ignore specific graphics and media errors
         # options.add_experimental_option('excludeSwitches', ['enable-logging'])
         
-        # prefs = {
-        #     "profile.managed_default_content_settings.images": 2,
-        #     "profile.default_content_setting_values.media_stream": 2
-        # }
-        # options.add_experimental_option("prefs", prefs)
+        prefs = {
+            "profile.managed_default_content_settings.images": 2,
+            "profile.default_content_setting_values.media_stream": 2
+        }
+        options.add_experimental_option("prefs", prefs)
         driver = webdriver.Chrome(options=options)
         
         # driver.set_page_load_timeout(timeout)
