@@ -26,6 +26,7 @@ from routes import process_row,newsletter,create_docx, get_newsletter_background
 import requests
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from mailing import send_email
 from webdriver_manager.firefox import GeckoDriverManager
 import undetected_chromedriver as uc
@@ -529,6 +530,14 @@ def clean_extracted_text(text: str) -> str:
 def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Optional[str]]:
     driver = None
     try:
+        
+        profile = FirefoxProfile()
+        
+        profile.set_preference("permissions.default.image", 2)  # Block all images
+        profile.set_preference("dom.webnotifications.enabled", False)  # Disable notifications
+        profile.set_preference("media.volume_scale", "0.0")  # Mute audio
+        
+        
         # Set up Firefox options
         options = Options()
         options.add_argument("--headless")  # Run in headless mode
@@ -536,11 +545,8 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         options.add_argument("--no-sandbox")
         options.add_argument("--start-maximized")
         options.add_argument("--disable-dev-shm-usage")
+        options.profile = profile
 
-        # Optional: Set Firefox preferences (e.g., block images)
-        options.set_preference("permissions.default.image", 2)  # Block all images
-        options.set_preference("dom.webnotifications.enabled", False)  # Disable notifications
-        options.set_preference("media.volume_scale", "0.0")  # Mute audio
 
         # Initialize the WebDriver
         driver = webdriver.Firefox(
