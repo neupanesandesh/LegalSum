@@ -548,18 +548,18 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         
         # More robust graphics rendering fallback
         # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
-        # options.add_argument("--disable-software-rasterizer")
-        # options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
-        # options.add_argument("--enable-unsafe-swiftshader")
-        # # Media and audio configuration
-        # options.add_argument("--disable-audio-output")
-        # options.add_argument("--disable-video")
-        # # options.page_load_strategy = 'eager'
-        # options.add_argument("--disable-extensions")
-        # options.add_argument("--disable-logging")
-        # options.add_argument("--disable-crash-reporter")
-        # options.add_argument("--disable-background-networking")
-        # options.add_argument("--remote-debugging-port=9222")
+        options.add_argument("--disable-software-rasterizer")
+        options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
+        options.add_argument("--enable-unsafe-swiftshader")
+        # Media and audio configuration
+        options.add_argument("--disable-audio-output")
+        options.add_argument("--disable-video")
+        options.page_load_strategy = 'eager'
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-logging")
+        options.add_argument("--disable-crash-reporter")
+        options.add_argument("--disable-background-networking")
+        options.add_argument("--remote-debugging-port=9222")
 
 
         # Ignore specific graphics and media errors
