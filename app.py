@@ -13,29 +13,24 @@ import nltk
 from nltk.tokenize import word_tokenize
 from selenium import webdriver
 from nltk.data import find
-from selenium.webdriver.chrome.service import Service as ChromeService
-import traceback
 from selenium import webdriver
 from typing import Optional, Tuple
 from selenium.webdriver.chrome.options import Options
-import asyncio
-import aiohttp
 import pandas as pd
 import streamlit as st
 import docx2txt
 from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
-from selenium.common.exceptions import WebDriverException, TimeoutException
 from selenium.webdriver.common.by import By
 from routes import process_row,newsletter,create_docx, get_newsletter_background, get_topic_newsletter, format_date_and_info
 import requests
 from selenium.webdriver.chrome.service import Service
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.common.exceptions import TimeoutException
 from mailing import send_email
+from webdriver_manager.firefox import GeckoDriverManager
 import undetected_chromedriver as uc
 import time
-from webdriver_manager.core.os_manager import ChromeType
-from webdriver_manager.chrome import ChromeDriverManager
+
 from dotenv import load_dotenv
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
@@ -534,47 +529,32 @@ def clean_extracted_text(text: str) -> str:
 def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Optional[str]]:
     driver = None
     try:
+        # Set up Firefox options
         options = Options()
-        # options.binary_location = "/usr/bin/chromium-browser"
-        # Enhanced GPU and rendering configuration
-        # options.add_argument("--start-maximized")
-        options.add_argument("--headless")
+        options.add_argument("--headless")  # Run in headless mode
+        options.add_argument("--disable-gpu")
         options.add_argument("--no-sandbox")
-        # # options.headless=True
-        # options.add_argument("--disable-dev-shm-usage")
-        # options.add_argument('--disable-infobars')
-        # options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
-        # # options.add_argument("--headless=new")
-        
-        # # More robust graphics rendering fallback
-        # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
-        # options.add_argument("--disable-software-rasterizer")
-        # options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
-        # options.add_argument("--enable-unsafe-swiftshader")
-        # # Media and audio configuration
-        # options.add_argument("--disable-audio-output")
-        # options.add_argument("--disable-video")
-        # # options.page_load_strategy = 'eager'
-        # options.add_argument("--disable-extensions")
-        # options.add_argument("--disable-logging")
-        # options.add_argument("--disable-crash-reporter")
-        # options.add_argument("--disable-background-networking")
-        # options.add_argument("--remote-debugging-port=9222")
+        options.add_argument("--start-maximized")
+        options.add_argument("--disable-dev-shm-usage")
 
+        # Optional: Set Firefox preferences (e.g., block images)
+        options.set_preference("permissions.default.image", 2)  # Block all images
+        options.set_preference("dom.webnotifications.enabled", False)  # Disable notifications
+        options.set_preference("media.volume_scale", "0.0")  # Mute audio
 
-        # Ignore specific graphics and media errors
-        options.add_experimental_option('excludeSwitches', ['enable-logging'])
-        
-        prefs = {
-            "profile.managed_default_content_settings.images": 2,
-            "profile.default_content_setting_values.media_stream": 2
-        }
-        options.add_experimental_option("prefs", prefs)
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="120.0.6099.10900").install()), options=options)
-        
-        # driver.set_page_load_timeout(timeout)
+        # Initialize the WebDriver
+        driver = webdriver.Firefox(
+            service=Service(GeckoDriverManager().install()),
+            options=options
+        )
+
+        # Set timeouts
+        driver.set_page_load_timeout(timeout)
+
+        # Open the URL
         driver.get(url)
-        time.sleep(3)
+        time.sleep(3)  # Allow time for the page to load
+        
         # Wait for initial page load
         wait_for_page_load(driver, timeout)
 
@@ -598,18 +578,13 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
 
         return cleaned_content, None
 
-    except TimeoutException:
-        return None, "Page load timeout occurred"
-    except WebDriverException as e:
-        return None, f"WebDriver error: {str(e)}"
     except Exception as e:
-        print(f"Selenium Scraping Error: {e}")
-        print(f"Error Type: {type(e).__name__}")
-        traceback.print_exc()
         return None, str(e)
+
     finally:
         if driver:
             driver.quit()
+
 
 
 
