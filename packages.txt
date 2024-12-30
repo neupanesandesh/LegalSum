@@ -9,4 +9,3 @@ fonts-liberation
 xvfb
 chromium
 chromium-driver
-

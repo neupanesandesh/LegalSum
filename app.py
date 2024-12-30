@@ -11,8 +11,8 @@ from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
 import nltk
 from nltk.tokenize import word_tokenize
-import subprocess
 from selenium import webdriver
+import subprocess
 from nltk.data import find
 import traceback
 from selenium import webdriver
@@ -24,7 +24,7 @@ from routes import process_ocr_pdf
 import pandas as pd
 import streamlit as st
 from docx2pdf import convert
-# import pythoncom
+import pythoncom
 from pathlib import Path
 import tempfile
 import docx2txt
@@ -1099,82 +1099,97 @@ def is_image_based_docx(docx_file):
         print(f"Error checking DOCX for images: {e}")
         return False
 
-
 def convert_docx_to_pdf(docx_file):
     """
-    Convert DOCX file to PDF using unoconv and return as BytesIO object.
+    Convert DOCX file to PDF using LibreOffice and return as BytesIO object.
+    Compatible with Linux environments like Streamlit Cloud.
+    
+    Args:
+        docx_file: Streamlit uploaded file object containing the DOCX file
+        
+    Returns:
+        io.BytesIO: PDF file as bytes if successful, None if conversion fails
     """
     try:
         # Create a temporary directory
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Define paths for temporary files
-            temp_docx = Path(temp_dir) / "temp.docx"
-            temp_pdf = Path(temp_dir) / "temp.pdf"
-
-            # Save the uploaded DOCX file to a temporary location
+            temp_dir_path = Path(temp_dir)
+            temp_docx = temp_dir_path / "temp.docx"
+            
+            # Save the uploaded file to temporary location
             with open(temp_docx, "wb") as f:
                 f.write(docx_file.getvalue())
-
-            # Call unoconv to convert DOCX to PDF
-            subprocess.run(
-                ["unoconv", "-f", "pdf", "-o", temp_pdf, temp_docx],
-                check=True
-            )
-
-            # Read the generated PDF into a BytesIO object
+            
+            # Convert to PDF using LibreOffice
+            process = subprocess.Popen([
+                'libreoffice',
+                '--headless',
+                '--convert-to',
+                'pdf',
+                '--outdir',
+                temp_dir,
+                str(temp_docx)
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
+            process.wait()
+            
+            # Check if the conversion was successful
+            temp_pdf = temp_dir_path / "temp.pdf"
+            if not temp_pdf.exists():
+                st.error("PDF conversion failed")
+                return None
+            
+            # Read the generated PDF into BytesIO
             pdf_bytes = io.BytesIO()
             with open(temp_pdf, "rb") as f:
                 pdf_bytes.write(f.read())
-
-            # Reset pointer to start of the BytesIO object
+            
+            # Reset pointer to start
             pdf_bytes.seek(0)
-
+            
             return pdf_bytes
-
-    except subprocess.CalledProcessError as e:
-        print(f"Error calling unoconv: {e}")
+            
     except Exception as e:
-        print(f"Unexpected error: {e}")
-
-    return None
+        st.error(f"Error converting DOCX to PDF: {e}")
+        return None
 
 # def convert_docx_to_pdf(docx_file):
-#     """
-#     Convert DOCX file to PDF and return as BytesIO object
-#     """
-#     try:
-#         # Create a temporary directory
-#         with tempfile.TemporaryDirectory() as temp_dir:
-#             # Create paths for temporary files
-#             temp_docx = Path(temp_dir) / "temp.docx"
-#             temp_pdf = Path(temp_dir) / "temp.pdf"
+    """
+    Convert DOCX file to PDF and return as BytesIO object
+    """
+    try:
+        # Create a temporary directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create paths for temporary files
+            temp_docx = Path(temp_dir) / "temp.docx"
+            temp_pdf = Path(temp_dir) / "temp.pdf"
             
-#             # Save the uploaded file to temporary location
-#             with open(temp_docx, "wb") as f:
-#                 f.write(docx_file.getvalue())
+            # Save the uploaded file to temporary location
+            with open(temp_docx, "wb") as f:
+                f.write(docx_file.getvalue())
             
-#             # Initialize COM for docx2pdf
-#             pythoncom.CoInitialize()
+            # Initialize COM for docx2pdf
+            pythoncom.CoInitialize()
             
-#             # Convert to PDF
-#             convert(str(temp_docx), str(temp_pdf))
+            # Convert to PDF
+            convert(str(temp_docx), str(temp_pdf))
             
-#             # Read the generated PDF into BytesIO
-#             pdf_bytes = io.BytesIO()
-#             with open(temp_pdf, "rb") as f:
-#                 pdf_bytes.write(f.read())
+            # Read the generated PDF into BytesIO
+            pdf_bytes = io.BytesIO()
+            with open(temp_pdf, "rb") as f:
+                pdf_bytes.write(f.read())
             
-#             # Reset pointer to start
-#             pdf_bytes.seek(0)
+            # Reset pointer to start
+            pdf_bytes.seek(0)
             
-#             return pdf_bytes
+            return pdf_bytes
             
-#     except Exception as e:
-#         print(f"Error converting DOCX to PDF: {e}")
-#         return None
-#     finally:
-#         # Uninitialize COM
-#         pythoncom.CoUninitialize()
+    except Exception as e:
+        print(f"Error converting DOCX to PDF: {e}")
+        return None
+    finally:
+        # Uninitialize COM
+        pythoncom.CoUninitialize()
 
 # def extract_text(file):
 #     if file is not None:
@@ -2474,4 +2489,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
