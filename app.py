@@ -1102,43 +1102,41 @@ def is_image_based_docx(docx_file):
 
 def convert_docx_to_pdf(docx_file):
     """
-    Convert DOCX file to PDF and return as BytesIO object
+    Convert DOCX file to PDF using unoconv and return as BytesIO object.
     """
     try:
         # Create a temporary directory
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create paths for temporary files
+            # Define paths for temporary files
             temp_docx = Path(temp_dir) / "temp.docx"
             temp_pdf = Path(temp_dir) / "temp.pdf"
-            
-            # Save the uploaded file to temporary location
+
+            # Save the uploaded DOCX file to a temporary location
             with open(temp_docx, "wb") as f:
                 f.write(docx_file.getvalue())
-            
-            # Use LibreOffice for the conversion
+
+            # Call unoconv to convert DOCX to PDF
             subprocess.run(
-                ["libreoffice", "--headless", "--convert-to", "pdf", str(temp_docx)],
-                check=True,
-                cwd=temp_dir,
+                ["unoconv", "-f", "pdf", "-o", temp_pdf, temp_docx],
+                check=True
             )
-            
-            # Read the generated PDF into BytesIO
+
+            # Read the generated PDF into a BytesIO object
             pdf_bytes = io.BytesIO()
             with open(temp_pdf, "rb") as f:
                 pdf_bytes.write(f.read())
-            
-            # Reset pointer to start
-            pdf_bytes.seek(0)
-            
-            return pdf_bytes
-            
-    except subprocess.CalledProcessError as e:
-        print(f"LibreOffice conversion failed: {e}")
-    except Exception as e:
-        print(f"Error converting DOCX to PDF: {e}")
-    
-    return None
 
+            # Reset pointer to start of the BytesIO object
+            pdf_bytes.seek(0)
+
+            return pdf_bytes
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error calling unoconv: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+
+    return None
 
 # def convert_docx_to_pdf(docx_file):
 #     """
