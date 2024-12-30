@@ -11,6 +11,7 @@ from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
 import nltk
 from nltk.tokenize import word_tokenize
+import subprocess
 from selenium import webdriver
 from nltk.data import find
 import traceback
@@ -1114,8 +1115,12 @@ def convert_docx_to_pdf(docx_file):
             with open(temp_docx, "wb") as f:
                 f.write(docx_file.getvalue())
             
-            # Convert to PDF
-            convert(str(temp_docx), str(temp_pdf))
+            # Use LibreOffice for the conversion
+            subprocess.run(
+                ["libreoffice", "--headless", "--convert-to", "pdf", str(temp_docx)],
+                check=True,
+                cwd=temp_dir,
+            )
             
             # Read the generated PDF into BytesIO
             pdf_bytes = io.BytesIO()
@@ -1127,9 +1132,12 @@ def convert_docx_to_pdf(docx_file):
             
             return pdf_bytes
             
+    except subprocess.CalledProcessError as e:
+        print(f"LibreOffice conversion failed: {e}")
     except Exception as e:
         print(f"Error converting DOCX to PDF: {e}")
-        return None
+    
+    return None
 
 
 # def convert_docx_to_pdf(docx_file):
