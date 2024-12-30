@@ -5,10 +5,15 @@ from docx import Document
 from openai import OpenAI
 from docx.shared import Pt, RGBColor
 from docx.oxml.ns import qn
-from selenium.webdriver.support import expected_conditions as EC
-import time
 from datetime import datetime
+import streamlit as st
+import fitz  # PyMuPDF
+import easyocr
+from PIL import Image
+import numpy as np
+from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
+
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
 
@@ -297,3 +302,71 @@ def create_docx(data_list):
     doc.save(doc_path)
 
     return doc_path
+
+
+def extract_image_from_page(pdf_document, page_num):
+    """Extract image from a single PDF page."""
+    try:
+        page = pdf_document[page_num]
+        pix = page.get_pixmap(matrix=fitz.Matrix(100/72, 100/72))
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        return np.array(img)
+    except Exception as e:
+        print(f"Error extracting image from page {page_num}: {e}")
+        return None
+
+def extract_images_from_pdf(pdf_file):
+    """Extract images from all pages of the PDF."""
+    images = []
+    try:
+        pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(extract_image_from_page, pdf_document, page_num) 
+                for page_num in range(len(pdf_document))
+            ]
+            for future in futures:
+                result = future.result()
+                if result is not None:
+                    images.append(result)
+        return images
+    except Exception as e:
+        print(f"Error extracting images from PDF: {e}")
+        return []
+
+def extract_text_from_image(reader, image_np):
+    """Extract text from a single image using EasyOCR."""
+    try:
+        results = reader.readtext(image_np)
+        texts = [entry[1] for entry in results] if results else []
+        return " ".join(texts)
+    except Exception as e:
+        print(f"Error extracting text from image: {e}")
+        return ""
+
+def process_ocr_pdf(pdf_file):
+    """Main function to process PDF and extract text using OCR."""
+    try:
+        # Create reader once
+        reader = easyocr.Reader(['en'])
+        
+        # Reset file pointer to beginning
+        pdf_file.seek(0)
+        
+        # Extract images
+        images = extract_images_from_pdf(pdf_file)
+        if not images:
+            return None
+            
+        # Extract text from each image
+        texts = []
+        for img in images:
+            text = extract_text_from_image(reader, img)
+            if text:
+                texts.append(text)
+                
+        return texts if texts else None
+        
+    except Exception as e:
+        print(f"Failed to process the file: {e}")
+        return None
