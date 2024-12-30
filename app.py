@@ -24,7 +24,7 @@ from routes import process_ocr_pdf
 import pandas as pd
 import streamlit as st
 from docx2pdf import convert
-import pythoncom
+# import pythoncom
 from pathlib import Path
 import tempfile
 import docx2txt
