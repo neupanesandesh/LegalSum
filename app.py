@@ -23,7 +23,7 @@ from routes import process_ocr_pdf
 import pandas as pd
 import streamlit as st
 from docx2pdf import convert
-import pythoncom
+# import pythoncom
 from pathlib import Path
 import tempfile
 import docx2txt
@@ -1098,6 +1098,7 @@ def is_image_based_docx(docx_file):
         print(f"Error checking DOCX for images: {e}")
         return False
 
+
 def convert_docx_to_pdf(docx_file):
     """
     Convert DOCX file to PDF and return as BytesIO object
@@ -1112,9 +1113,6 @@ def convert_docx_to_pdf(docx_file):
             # Save the uploaded file to temporary location
             with open(temp_docx, "wb") as f:
                 f.write(docx_file.getvalue())
-            
-            # Initialize COM for docx2pdf
-            pythoncom.CoInitialize()
             
             # Convert to PDF
             convert(str(temp_docx), str(temp_pdf))
@@ -1132,9 +1130,45 @@ def convert_docx_to_pdf(docx_file):
     except Exception as e:
         print(f"Error converting DOCX to PDF: {e}")
         return None
-    finally:
-        # Uninitialize COM
-        pythoncom.CoUninitialize()
+
+
+# def convert_docx_to_pdf(docx_file):
+#     """
+#     Convert DOCX file to PDF and return as BytesIO object
+#     """
+#     try:
+#         # Create a temporary directory
+#         with tempfile.TemporaryDirectory() as temp_dir:
+#             # Create paths for temporary files
+#             temp_docx = Path(temp_dir) / "temp.docx"
+#             temp_pdf = Path(temp_dir) / "temp.pdf"
+            
+#             # Save the uploaded file to temporary location
+#             with open(temp_docx, "wb") as f:
+#                 f.write(docx_file.getvalue())
+            
+#             # Initialize COM for docx2pdf
+#             pythoncom.CoInitialize()
+            
+#             # Convert to PDF
+#             convert(str(temp_docx), str(temp_pdf))
+            
+#             # Read the generated PDF into BytesIO
+#             pdf_bytes = io.BytesIO()
+#             with open(temp_pdf, "rb") as f:
+#                 pdf_bytes.write(f.read())
+            
+#             # Reset pointer to start
+#             pdf_bytes.seek(0)
+            
+#             return pdf_bytes
+            
+#     except Exception as e:
+#         print(f"Error converting DOCX to PDF: {e}")
+#         return None
+#     finally:
+#         # Uninitialize COM
+#         pythoncom.CoUninitialize()
 
 # def extract_text(file):
 #     if file is not None:
