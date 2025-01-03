@@ -1974,6 +1974,10 @@ def main():
                 user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
 
                 if user_file_input is not None:
+                    # Reset session state variables
+                    st.session_state.processing_complete = False
+                    st.session_state.extracted_text = None
+
                     # Create progress placeholder
                     progress_placeholder = st.empty()
                     status_placeholder = st.empty()
@@ -2027,8 +2031,6 @@ def main():
                                         st.error("OCR extraction failed. The DOCX might contain unclear images.")
                                         show_additional_inputs = False
                                             
-                                # combined_text = extract_text_from_docx(user_file_input)
-                                # progress_bar.progress(90)
                                 else:
                                     status_placeholder.info("Extracting text from DOCX...")
                                     progress_bar.progress(50)
