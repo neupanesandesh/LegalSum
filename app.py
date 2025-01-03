@@ -1795,10 +1795,10 @@ def is_positive_integer(value):
         return False
 
 def initialize_session_state():
-    if 'extracted_text' not in st.session_state:
-        st.session_state.extracted_text = None
     if 'processing_complete' not in st.session_state:
         st.session_state.processing_complete = False
+    if 'extracted_text' not in st.session_state:
+        st.session_state.extracted_text = None
     
 # Define the Streamlit app
 def main():
@@ -2069,14 +2069,7 @@ def main():
 
             # Only show additional inputs if we have valid text and processing is complete
             if show_additional_inputs and st.session_state.processing_complete:
-                if role == "user":
-                    try:
-                        states = roles_config["usernames"][username]["states"]
-                    except:
-                        states = []
-                else:
-                    states = ["New Jersey", "Texas", "Connecticut"]
-                
+                states = ["New Jersey", "Texas", "Connecticut"]
                 state = st.selectbox("Select a US State:", states)
                 
                 if state != "Texas":
