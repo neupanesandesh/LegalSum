@@ -1794,11 +1794,11 @@ def is_positive_integer(value):
     except ValueError:
         return False
 
-def initialize_session_state():
-    if 'processing_complete' not in st.session_state:
-        st.session_state.processing_complete = False
-    if 'extracted_text' not in st.session_state:
-        st.session_state.extracted_text = None
+# def initialize_session_state():
+#     if 'processing_complete' not in st.session_state:
+#         st.session_state.processing_complete = False
+#     if 'extracted_text' not in st.session_state:
+#         st.session_state.extracted_text = None
     
 # Define the Streamlit app
 def main():
@@ -1954,7 +1954,7 @@ def main():
         if app_mode == "Legal Decision Summarizer":
             st.title("Legal Decision Summarizer")
             
-            initialize_session_state()
+            # initialize_session_state()
             
             choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
             
@@ -1965,80 +1965,80 @@ def main():
 
             if choice1 == 'Copy-Paste Text':
                 user_input = st.text_area("Enter legal decision:", height=150)
-                if user_input:
-                    first_two_pages = extract_first_two_pages(user_input)
-                    st.session_state.extracted_text = user_input
-                    st.session_state.processing_complete = True
+            
+                first_two_pages = extract_first_two_pages(user_input)
+                # st.session_state.extracted_text = user_input
+                # st.session_state.processing_complete = True
 
             elif choice1 == 'Upload Document':
                 user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
 
                 if user_file_input is not None:
                     # Reset session state variables
-                    st.session_state.processing_complete = False
-                    st.session_state.extracted_text = None
+                    # st.session_state.processing_complete = False
+                    # st.session_state.extracted_text = None
 
                     # Create progress placeholder
                     progress_placeholder = st.empty()
                     status_placeholder = st.empty()
 
-                    if not st.session_state.processing_complete:
-                        if user_file_input.name.endswith('.pdf'):
-                            status_placeholder.info("Processing PDF... Please wait...")
-                            progress_bar = progress_placeholder.progress(0)
+                    # if not st.session_state.processing_complete:
+                    if user_file_input.name.endswith('.pdf'):
+                        status_placeholder.info("Processing PDF... Please wait...")
+                        progress_bar = progress_placeholder.progress(0)
 
-                            # Process PDF
-                            combined_text = None
-                            try:
-                                if is_image_based_pdf(user_file_input):
-                                    status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
-                                    progress_bar.progress(25)
-                                    
-                                    # Process OCR
-                                    extracted_text = process_ocr_pdf(user_file_input)
-                                    progress_bar.progress(75)
-                                    
-                                    if extracted_text and any(extracted_text):
-                                        combined_text = " ".join(extracted_text)
-                                    else:
-                                        st.error("OCR extraction failed. The PDF might contain unclear images.")
-                                        show_additional_inputs = False
+                        # Process PDF
+                        combined_text = None
+                        try:
+                            if is_image_based_pdf(user_file_input):
+                                status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
+                                progress_bar.progress(25)
+                                
+                                # Process OCR
+                                extracted_text = process_ocr_pdf(user_file_input)
+                                progress_bar.progress(75)
+                                
+                                if extracted_text and any(extracted_text):
+                                    combined_text = " ".join(extracted_text)
                                 else:
-                                    status_placeholder.info("Extracting text from PDF...")
-                                    progress_bar.progress(50)
-                                    combined_text = extract_text_from_pdf(user_file_input)
-                                    progress_bar.progress(90)
+                                    st.error("OCR extraction failed. The PDF might contain unclear images.")
+                                    show_additional_inputs = False
+                            else:
+                                status_placeholder.info("Extracting text from PDF...")
+                                progress_bar.progress(50)
+                                combined_text = extract_text_from_pdf(user_file_input)
+                                progress_bar.progress(90)
 
-                            except Exception as e:
-                                st.error(f"Error processing PDF: {str(e)}")
-                                show_additional_inputs = False
+                        except Exception as e:
+                            st.error(f"Error processing PDF: {str(e)}")
+                            show_additional_inputs = False
 
-                        elif user_file_input.name.endswith('.docx'):
-                            status_placeholder.info("Processing DOCX... Please wait...")
-                            progress_bar = progress_placeholder.progress(0)
-                            combined_text = None
-                            try:
-                                if is_image_based_docx(user_file_input):
-                                    status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
-                                    progress_bar.progress(25)
-                                    pdf_file = convert_docx_to_pdf(user_file_input)
-                                    extracted_text = process_ocr_pdf(pdf_file)
-                                    progress_bar.progress(75)
-                                    
-                                    if extracted_text and any(extracted_text):
-                                        combined_text = " ".join(extracted_text)
-                                    else:
-                                        st.error("OCR extraction failed. The DOCX might contain unclear images.")
-                                        show_additional_inputs = False
-                                            
+                    elif user_file_input.name.endswith('.docx'):
+                        status_placeholder.info("Processing DOCX... Please wait...")
+                        progress_bar = progress_placeholder.progress(0)
+                        combined_text = None
+                        try:
+                            if is_image_based_docx(user_file_input):
+                                status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
+                                progress_bar.progress(25)
+                                pdf_file = convert_docx_to_pdf(user_file_input)
+                                extracted_text = process_ocr_pdf(pdf_file)
+                                progress_bar.progress(75)
+                                
+                                if extracted_text and any(extracted_text):
+                                    combined_text = " ".join(extracted_text)
                                 else:
-                                    status_placeholder.info("Extracting text from DOCX...")
-                                    progress_bar.progress(50)
-                                    combined_text = extract_text_from_docx(user_file_input)
-                                    progress_bar.progress(90)
-                            except Exception as e:
-                                st.error(f"Error processing DOCX: {str(e)}")
-                                show_additional_inputs = False
+                                    st.error("OCR extraction failed. The DOCX might contain unclear images.")
+                                    show_additional_inputs = False
+                                        
+                            else:
+                                status_placeholder.info("Extracting text from DOCX...")
+                                progress_bar.progress(50)
+                                combined_text = extract_text_from_docx(user_file_input)
+                                progress_bar.progress(90)
+                        except Exception as e:
+                            st.error(f"Error processing DOCX: {str(e)}")
+                            show_additional_inputs = False
 
                         # Process the extracted text
                         if combined_text:
@@ -2048,39 +2048,57 @@ def main():
                             else:
                                 first_two_pages = extract_first_two_pages(combined_text)
                                 user_input = combined_text
-                                st.session_state.extracted_text = combined_text
-                                st.session_state.processing_complete = True
+                                # st.session_state.extracted_text = combined_text
+                                # st.session_state.processing_complete = True
                         else:
                             st.error(f"Could not extract text from the {user_file_input.name.split('.')[-1].upper()} file.")
-                            show_additional_inputs = False
+                            first_two_pages = None
+                            user_input = None
+                            show_additional_inputs = False 
 
                         # Clean up progress indicators
-                        progress_placeholder.empty()
-                        status_placeholder.empty()
+                        # progress_placeholder.empty()
+                        # status_placeholder.empty()
 
                     else:
+                        st.warning("No file uploaded. Please upload a document.")
+                        first_two_pages = None
+                        user_input = None
                         # Use cached results
-                        user_input = st.session_state.extracted_text
-                        first_two_pages = extract_first_two_pages(user_input)
+                        # user_input = st.session_state.extracted_text
+                        # first_two_pages = extract_first_two_pages(user_input)
 
                 else:
                     st.warning("No file uploaded. Please upload a document.")
                     show_additional_inputs = False
 
             # Only show additional inputs if we have valid text and processing is complete
-            if show_additional_inputs and st.session_state.processing_complete:
-                states = ["New Jersey", "Texas", "Connecticut"]
-                state = st.selectbox("Select a US State:", states)
+            if show_additional_inputs:
+                if role == "user":
+                    try:
+                        states = roles_config["usernames"][username]["states"]
+                    except:
+                        states = []
+                else:
+                    states = ["New Jersey", "Texas", "Connecticut"]
                 
+                state = st.selectbox("Select a US State:", states)  
+                
+                # Only show the page count option if the selected state is not Texas
                 if state != "Texas":
+                    # Create a text input for the page count
                     page_count_input = st.text_input("Page count:", value="1")
+
+                    # Validate the input
                     if is_positive_integer(page_count_input):
                         page_count = int(page_count_input)
+                        # Continue with your logic using page_count
                     else:
                         st.error("Please enter a valid positive integer for the page count.")
-                        page_count = None
                 else:
-                    page_count = None
+                    # If Texas is selected, you can set a default value for page_count or handle it as needed
+                    page_count = None # Or any default/fallback value you prefer
+
 
                 if st.button("Summarize"):
                     if state == "New Jersey":
