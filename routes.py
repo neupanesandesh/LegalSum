@@ -345,25 +345,99 @@ def extract_text_from_image(reader, image_np):
         return ""
 
 @st.cache_resource
-def load_reader():
-    """Load EasyOCR reader."""
-    return easyocr.Reader(['en'])
+def load_easyocr():
+    """Initialize EasyOCR reader with caching to prevent reloading"""
+    return easyocr.Reader(['en'], gpu=False)
 
-def process_ocr_pdf(pdf_file, reader):
-    """Process PDF and extract text using OCR."""
+def optimize_image(image):
+    """Optimize image before OCR processing"""
+    # Convert to PIL Image if numpy array
+    if isinstance(image, np.ndarray):
+        image = Image.fromarray(image)
+    
+    # Resize large images to reduce processing time
+    max_size = 1600
+    if max(image.size) > max_size:
+        ratio = max_size / max(image.size)
+        new_size = tuple([int(dim * ratio) for dim in image.size])
+        image = image.resize(new_size, Image.Resampling.LANCZOS)
+    
+    # Convert to grayscale to improve OCR accuracy and reduce processing time
+    image = image.convert('L')
+    
+    # Optimize contrast
+    image = Image.fromarray(np.uint8(np.clip((np.array(image) - 128) * 1.2 + 128, 0, 255)))
+    
+    return image
+
+def process_ocr_pdf(pdf_file):
+    """Main function to process PDF and extract text using OCR with optimizations"""
     try:
-        # Reset file pointer
+        # Get cached reader instance
+        reader = load_easyocr()
+        
+        # Reset file pointer to beginning
         pdf_file.seek(0)
         
-        # Extract images
+        # Extract images - assuming this function returns a list of images
         images = extract_images_from_pdf(pdf_file)
-        if not images:
+        if images is None or len(images) == 0:  # Fixed boolean evaluation
             return None
-
-        # Extract text
-        texts = [extract_text_from_image(reader, img) for img in images if img]
+        
+        # Process images in batches to manage memory
+        batch_size = 3
+        texts = []
+        
+        for i in range(0, len(images), batch_size):
+            batch = images[i:i + batch_size]
+            batch_texts = []
+            
+            # Add progress bar
+            progress_text = f"Processing images {i+1} to {min(i+batch_size, len(images))} of {len(images)}"
+            with st.progress(0, text=progress_text) as progress_bar:
+                for idx, img in enumerate(batch):
+                    # Skip if image is None or empty
+                    if img is None or (isinstance(img, np.ndarray) and img.size == 0):
+                        continue
+                        
+                    # Optimize image
+                    try:
+                        optimized_img = optimize_image(img)
+                        
+                        # Convert optimized image to numpy array for EasyOCR
+                        img_array = np.array(optimized_img)
+                        
+                        # Check if image array is valid
+                        if img_array.size == 0:
+                            continue
+                        
+                        # Extract text with confidence threshold
+                        result = reader.readtext(
+                            img_array,
+                            paragraph=True,  # Group text into paragraphs
+                            batch_size=1,    # Reduce memory usage
+                            min_size=20,     # Ignore very small text
+                            contrast_ths=0.2, # Lower contrast threshold
+                            adjust_contrast=0.5, # Adjust contrast
+                            text_threshold=0.7  # Minimum confidence threshold
+                        )
+                        
+                        # Extract text from results
+                        page_text = ' '.join([text[1] for text in result]) if result else ''
+                        if page_text.strip():  # Only add non-empty text
+                            batch_texts.append(page_text)
+                        
+                    except Exception as e:
+                        st.warning(f"Skipping image {i+idx+1} due to error: {str(e)}")
+                        continue
+                    
+                    # Update progress
+                    progress_bar.progress((idx + 1) / len(batch))
+            
+            texts.extend(batch_texts)
+        
         return texts if texts else None
-
+        
     except Exception as e:
-        st.error(f"Failed to process the file: {e}")
+        st.error(f"Failed to process the file: {str(e)}")
         return None

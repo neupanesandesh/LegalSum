@@ -20,7 +20,7 @@ from typing import Optional, Tuple
 import concurrent.futures
 from selenium.webdriver.chrome.options import Options
 import io
-from routes import process_ocr_pdf, load_reader
+from routes import process_ocr_pdf
 import pandas as pd
 import streamlit as st
 from docx2pdf import convert
@@ -1019,21 +1019,27 @@ def extract_text_from_pdf(pdf_file):
     all_text = ""
     with pdfplumber.open(pdf_file) as pdf:
         for page_num, page in enumerate(pdf.pages):
-            # Extract header text
-            header_text = page.extract_text(x_tolerance=2, y_tolerance=2, layout=True)
-            header_text = header_text.split('\n')[0] if header_text else ""
-            
-            # Extract main page text
-            page_text = page.extract_text()
-            
-            # Check for image-based content by ensuring the presence of text
-            if not page_text and page.images:
-                page_text = "[Image-based content detected]"
-            
-            if page_num == 0:
-                all_text += f"Header: {header_text.strip()} {page_text.strip() if page_text else ''}\n\n"
-            else:
-                all_text += f"Header: {header_text.strip()} {page_text.strip() if page_text else ''}\n\n"
+            try:
+                # Extract header text
+                header_text = page.extract_text(x_tolerance=2, y_tolerance=2, layout=True)
+                header_text = header_text.split('\n')[0] if header_text else ""
+                
+                # Extract main page text
+                page_text = page.extract_text()
+                
+                # Check for image-based content by ensuring the presence of text
+                # Fix the array comparison issue
+                has_images = len(page.images) > 0 if hasattr(page, 'images') else False
+                if not page_text and has_images:
+                    page_text = "[Image-based content detected]"
+                
+                # Format the text
+                current_text = f"Header: {header_text.strip()} {page_text.strip() if page_text else ''}\n\n"
+                all_text += current_text
+
+            except Exception as e:
+                print(f"Error processing page {page_num + 1}: {str(e)}")
+                continue
 
     return all_text.strip()
 
@@ -1991,8 +1997,7 @@ def main():
                                     progress_bar.progress(25)
                                     
                                     # Process OCR
-                                    reader = load_reader()
-                                    extracted_text = process_ocr_pdf(user_file_input,reader)
+                                    extracted_text = process_ocr_pdf(user_file_input)
                                     progress_bar.progress(75)
                                     
                                     if extracted_text and any(extracted_text):
@@ -2019,8 +2024,7 @@ def main():
                                     status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
                                     progress_bar.progress(25)
                                     pdf_file = convert_docx_to_pdf(user_file_input)
-                                    reader = load_reader()
-                                    extracted_text = process_ocr_pdf(pdf_file,reader)
+                                    extracted_text = process_ocr_pdf(pdf_file)
                                     progress_bar.progress(75)
                                     
                                     if extracted_text and any(extracted_text):
