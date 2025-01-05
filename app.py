@@ -20,7 +20,7 @@ from typing import Optional, Tuple
 import concurrent.futures
 from selenium.webdriver.chrome.options import Options
 import io
-from routes import process_ocr_pdf
+from routes import process_ocr_pdf, load_reader
 import pandas as pd
 import streamlit as st
 from docx2pdf import convert
@@ -1991,7 +1991,8 @@ def main():
                                     progress_bar.progress(25)
                                     
                                     # Process OCR
-                                    extracted_text = process_ocr_pdf(user_file_input)
+                                    reader = load_reader()
+                                    extracted_text = process_ocr_pdf(user_file_input,reader)
                                     progress_bar.progress(75)
                                     
                                     if extracted_text and any(extracted_text):
@@ -2018,7 +2019,8 @@ def main():
                                     status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
                                     progress_bar.progress(25)
                                     pdf_file = convert_docx_to_pdf(user_file_input)
-                                    extracted_text = process_ocr_pdf(pdf_file)
+                                    reader = load_reader()
+                                    extracted_text = process_ocr_pdf(pdf_file,reader)
                                     progress_bar.progress(75)
                                     
                                     if extracted_text and any(extracted_text):

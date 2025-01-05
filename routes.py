@@ -344,29 +344,26 @@ def extract_text_from_image(reader, image_np):
         print(f"Error extracting text from image: {e}")
         return ""
 
-def process_ocr_pdf(pdf_file):
-    """Main function to process PDF and extract text using OCR."""
+@st.cache_resource
+def load_reader():
+    """Load EasyOCR reader."""
+    return easyocr.Reader(['en'])
+
+def process_ocr_pdf(pdf_file, reader):
+    """Process PDF and extract text using OCR."""
     try:
-        # Create reader once
-        reader = easyocr.Reader(['en'])
-        
-        # Reset file pointer to beginning
+        # Reset file pointer
         pdf_file.seek(0)
         
         # Extract images
         images = extract_images_from_pdf(pdf_file)
         if not images:
             return None
-            
-        # Extract text from each image
-        texts = []
-        for img in images:
-            text = extract_text_from_image(reader, img)
-            if text:
-                texts.append(text)
-                
+
+        # Extract text
+        texts = [extract_text_from_image(reader, img) for img in images if img]
         return texts if texts else None
-        
+
     except Exception as e:
-        print(f"Failed to process the file: {e}")
+        st.error(f"Failed to process the file: {e}")
         return None
