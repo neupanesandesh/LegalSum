@@ -345,83 +345,25 @@ def extract_text_from_image(reader, image_np):
         return ""
 
 @st.cache_resource
-def load_easyocr():
-    """Initialize EasyOCR reader with caching to prevent reloading"""
-    return easyocr.Reader(['en'], gpu=False)
+def load_reader():
+    """Load EasyOCR reader."""
+    return easyocr.Reader(['en'])
 
-def optimize_image(image):
-    """Optimize image before OCR processing"""
-    # Convert to PIL Image if numpy array
-    if isinstance(image, np.ndarray):
-        image = Image.fromarray(image)
-    
-    # Resize large images to reduce processing time
-    max_size = 1600
-    if max(image.size) > max_size:
-        ratio = max_size / max(image.size)
-        new_size = tuple([int(dim * ratio) for dim in image.size])
-        image = image.resize(new_size, Image.Resampling.LANCZOS)
-    
-    # Convert to grayscale to improve OCR accuracy and reduce processing time
-    image = image.convert('L')
-    
-    # Optimize contrast
-    image = Image.fromarray(np.uint8(np.clip((np.array(image) - 128) * 1.2 + 128, 0, 255)))
-    
-    return image
-
-def process_ocr_pdf(pdf_file):
-    """Main function to process PDF and extract text using OCR with optimizations"""
+def process_ocr_pdf(pdf_file, reader):
+    """Process PDF and extract text using OCR."""
     try:
-        # Get cached reader instance
-        reader = load_easyocr()
-        
-        # Reset file pointer to beginning
+        # Reset file pointer
         pdf_file.seek(0)
         
         # Extract images
         images = extract_images_from_pdf(pdf_file)
         if not images:
             return None
-        
-        # Process images in batches to manage memory
-        batch_size = 3
-        texts = []
-        
-        for i in range(0, len(images), batch_size):
-            batch = images[i:i + batch_size]
-            batch_texts = []
-            
-            # Add progress bar
-            progress_text = f"Processing images {i+1} to {min(i+batch_size, len(images))} of {len(images)}"
-            with st.progress(0, text=progress_text) as progress_bar:
-                for idx, img in enumerate(batch):
-                    # Optimize image
-                    optimized_img = optimize_image(img)
-                    
-                    # Extract text with confidence threshold
-                    result = reader.readtext(
-                        np.array(optimized_img),
-                        paragraph=True,  # Group text into paragraphs
-                        batch_size=1,    # Reduce memory usage
-                        min_size=20,     # Ignore very small text
-                        contrast_ths=0.2, # Lower contrast threshold
-                        adjust_contrast=0.5, # Adjust contrast
-                        text_threshold=0.7  # Minimum confidence threshold
-                    )
-                    
-                    # Extract text from results
-                    page_text = ' '.join([text[1] for text in result])
-                    if page_text:
-                        batch_texts.append(page_text)
-                    
-                    # Update progress
-                    progress_bar.progress((idx + 1) / len(batch))
-            
-            texts.extend(batch_texts)
-        
+
+        # Extract text
+        texts = [extract_text_from_image(reader, img) for img in images if img]
         return texts if texts else None
-        
+
     except Exception as e:
-        st.error(f"Failed to process the file: {str(e)}")
+        st.error(f"Failed to process the file: {e}")
         return None
