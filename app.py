@@ -1989,7 +1989,7 @@ def main():
                         progress_bar = progress_placeholder.progress(0)
 
                         # Process PDF
-                        combined_text = None
+                        # combined_text = None
                         try:
                             if is_image_based_pdf(user_file_input):
                                 status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
@@ -2005,24 +2005,19 @@ def main():
                                     st.error("OCR extraction failed. The PDF might contain unclear images.")
                                     show_additional_inputs = False
                             else:
+                                status_placeholder.info("Extracting text from PDF...")
+                                progress_bar.progress(50)
                                 combined_text = extract_text_from_pdf(user_file_input)
-                                if combined_text:
-                                    first_two_pages = extract_first_two_pages(combined_text)
-                                    user_input = combined_text
-                                else:
-                                    st.error("Could Not extract text from the PDF. Please upload a valid PDF.")
-                                    first_two_pages = None
-                                    user_input = None
-                                    show_additional_inputs = False
+                                progress_bar.progress(90)
 
                         except Exception as e:
                             st.error(f"Error processing PDF: {str(e)}")
                             show_additional_inputs = False
-
+                            
                     elif user_file_input.name.endswith('.docx'):
                         status_placeholder.info("Processing DOCX... Please wait...")
                         progress_bar = progress_placeholder.progress(0)
-                        combined_text = None
+                        # combined_text = None
                         try:
                             if is_image_based_docx(user_file_input):
                                 status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
@@ -2039,14 +2034,8 @@ def main():
                             else:
                                 combined_text = extract_text_from_docx(user_file_input)
                                 if combined_text:
-                                    if len(combined_text.strip()) < 200:
-                                        st.error("Uploaded DOCX contains very little text. Please upload a valid DOCX file.")
-                                        first_two_pages = None
-                                        user_input = None
-                                        show_additional_inputs = False  # Hide additional inputs
-                                    else:
-                                        first_two_pages = extract_first_two_pages(combined_text)
-                                        user_input = combined_text
+                                    first_two_pages = extract_first_two_pages(combined_text)
+                                    user_input = combined_text
                                 else:
                                     st.error("Could not extract text from the DOCX file. Please upload a valid DOCX.")
                                     first_two_pages = None
