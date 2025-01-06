@@ -1795,11 +1795,9 @@ def is_positive_integer(value):
         return False
 
 def initialize_session_state():
-    # Initialize session state for Legal Decision Summarizer
+    # Existing initializations
     if 'legal_file_uploader_key' not in st.session_state:
         st.session_state.legal_file_uploader_key = 0
-    
-    # Initialize session state for Newsletter Quotes
     if 'newsletter_file_uploader_key' not in st.session_state:
         st.session_state.newsletter_file_uploader_key = 0
     if 'processed_data' not in st.session_state:
@@ -1984,6 +1982,7 @@ def main():
                 )
 
                 if user_file_input is not None:
+                    st.session_state.legal_file_uploader_key += 1 
                     # Create progress placeholder
                     progress_placeholder = st.empty()
                     status_placeholder = st.empty()
