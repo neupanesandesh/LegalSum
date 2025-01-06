@@ -1960,7 +1960,6 @@ def main():
         if app_mode == "Legal Decision Summarizer":
             st.title("Legal Decision Summarizer")
             
-            
             choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
             
             # Initialize variables
@@ -1982,7 +1981,6 @@ def main():
                 )
 
                 if user_file_input is not None:
-                    st.session_state.legal_file_uploader_key += 1 
                     # Create progress placeholder
                     progress_placeholder = st.empty()
                     status_placeholder = st.empty()
@@ -2052,6 +2050,7 @@ def main():
                             first_two_pages = extract_first_two_pages(combined_text)
                             user_input = combined_text
                             show_additional_inputs = True
+                            # Increment only once after successful processing
                             st.session_state.legal_file_uploader_key += 1
                     else:
                         st.error(f"Could not extract text from the {user_file_input.name.split('.')[-1].upper()} file.")
@@ -2060,9 +2059,6 @@ def main():
                     # Clean up progress indicators
                     progress_placeholder.empty()
                     status_placeholder.empty()
-
-                    # Increment the file uploader key to force a reset on next upload
-                    st.session_state.file_uploader_key += 1
 
                 else:
                     st.warning("No file uploaded. Please upload a document.")
