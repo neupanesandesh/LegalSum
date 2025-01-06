@@ -1953,7 +1953,7 @@ def main():
         if app_mode == "Legal Decision Summarizer":
             st.title("Legal Decision Summarizer")
             
-            initialize_session_state()
+            # initialize_session_state()
             
             choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
             
