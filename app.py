@@ -1795,12 +1795,21 @@ def is_positive_integer(value):
         return False
 
 def initialize_session_state():
-    # Only initialize if not already present
-    if 'file_uploader_key' not in st.session_state:
-        st.session_state.file_uploader_key = 0
+    # Initialize session state for Legal Decision Summarizer
+    if 'legal_file_uploader_key' not in st.session_state:
+        st.session_state.legal_file_uploader_key = 0
+    
+    # Initialize session state for Newsletter Quotes
+    if 'newsletter_file_uploader_key' not in st.session_state:
+        st.session_state.newsletter_file_uploader_key = 0
+    if 'processed_data' not in st.session_state:
+        st.session_state.processed_data = None
+    if 'downloaded' not in st.session_state:
+        st.session_state.downloaded = False
     
 # Define the Streamlit app
 def main():
+    initialize_session_state()
     check_openai_key(OPENAI_API_KEY)
     ensure_nltk_data()
     global page_count
@@ -1953,7 +1962,6 @@ def main():
         if app_mode == "Legal Decision Summarizer":
             st.title("Legal Decision Summarizer")
             
-            # initialize_session_state()
             
             choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
             
@@ -1969,11 +1977,10 @@ def main():
                     show_additional_inputs = True
 
             elif choice1 == 'Upload Document':
-                # Use a unique key for file uploader to force reset on new uploads
                 user_file_input = st.file_uploader(
                     "Upload your document", 
                     type=["pdf", "docx"],
-                    key=f"file_uploader_{st.session_state.file_uploader_key}"
+                    key=f"legal_uploader_{st.session_state.legal_file_uploader_key}"
                 )
 
                 if user_file_input is not None:
@@ -2046,6 +2053,7 @@ def main():
                             first_two_pages = extract_first_two_pages(combined_text)
                             user_input = combined_text
                             show_additional_inputs = True
+                            st.session_state.legal_file_uploader_key += 1
                     else:
                         st.error(f"Could not extract text from the {user_file_input.name.split('.')[-1].upper()} file.")
                         show_additional_inputs = False
@@ -2438,22 +2446,23 @@ def main():
             # uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
 
             # Check if we already have the processed data in session state
-            if 'processed_data' not in st.session_state:
-                st.session_state['processed_data'] = None
+            # if 'processed_data' not in st.session_state:
+            #     st.session_state['processed_data'] = None
                 
-            if 'file_uploader_key' not in st.session_state:
-                st.session_state.file_uploader_key = 0  
+            # if 'file_uploader_key' not in st.session_state:
+            #     st.session_state.file_uploader_key = 0  
                     
-            if 'downloaded' not in st.session_state:
-                st.session_state['downloaded'] = False
+            # if 'downloaded' not in st.session_state:
+            #     st.session_state['downloaded'] = False
                 
             if st.session_state['processed_data'] is None:
-                uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx", key=st.session_state.file_uploader_key)
+                uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx", key=st.session_state.newsletter_file_uploader_key)
 
                 # If a file is uploaded and not already processed
                 if uploaded_file is not None:
                     with st.spinner("Processing..."):
-                        st.session_state['processed_data'] = process_data(uploaded_file)
+                        st.session_state.processed_data = process_data(uploaded_file)
+                        st.session_state.newsletter_file_uploader_key += 1
 
             # If the data is processed
             if st.session_state['processed_data']:
@@ -2477,9 +2486,9 @@ def main():
                 
                 if st.session_state['downloaded']:
                     if process_button_placeholder.button("Process New File"):
-                        st.session_state['processed_data'] = None
-                        st.session_state['downloaded'] = False  # Reset the download state
-                        st.session_state.file_uploader_key += 1  # Increment the file uploader key to reset the uploader
+                        st.session_state.processed_data = None
+                        st.session_state.downloaded = False  # Reset the download state
+                        # st.session_state.file_uploader_key += 1  # Increment the file uploader key to reset the uploader
                         process_button_placeholder.empty()  # This removes the button after click
                         st.rerun() 
 
