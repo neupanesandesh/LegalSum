@@ -13,7 +13,8 @@ from PIL import Image
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
-
+from pdf2image import convert_from_bytes
+import concurrent.futures
 load_dotenv()
 OPENAI_API_KEY= os.getenv("OPENAI_API_KEY")
 
@@ -346,33 +347,82 @@ def extract_text_from_image(reader, image_np):
 
 @st.cache_resource
 def load_easyocr():
-    """Initialize EasyOCR reader with caching to prevent reloading"""
+    """Initialize EasyOCR reader with caching"""
     return easyocr.Reader(['en'], gpu=False)
 
-def process_ocr_pdf(pdf_file):
-    """Main function to process PDF and extract text using OCR."""
+def optimize_image(image):
+    """Optimize image for OCR processing"""
+    # Convert to PIL Image if needed
+    if not isinstance(image, Image.Image):
+        image = Image.fromarray(np.array(image))
+    
+    # Resize image if it's too large (keeping aspect ratio)
+    max_dimension = 1800
+    if max(image.size) > max_dimension:
+        ratio = max_dimension / max(image.size)
+        new_size = tuple(int(dim * ratio) for dim in image.size)
+        image = image.resize(new_size, Image.Resampling.LANCZOS)
+    
+    # Convert to grayscale
+    image = image.convert('L')
+    
+    # Optimize contrast
+    image = Image.fromarray(np.uint8(np.clip((np.array(image) * 1.2), 0, 255)))
+    
+    return image
+
+def process_single_page(args):
+    """Process a single page with optimization"""
+    reader, image = args
     try:
-        # Create reader once
-        reader = load_easyocr()
+        # Optimize image
+        optimized_image = optimize_image(image)
         
-        # Reset file pointer to beginning
-        pdf_file.seek(0)
+        # Convert to numpy array for EasyOCR
+        image_np = np.array(optimized_image)
         
-        # Extract images
-        images = extract_images_from_pdf(pdf_file)
+        # Extract text
+        results = reader.readtext(image_np)
+        
+        # Combine text from all detected regions
+        text = ' '.join([result[1] for result in results])
+        
+        return text.strip()
+    except Exception as e:
+        st.error(f"Error processing page: {str(e)}")
+        return ""
+
+def process_ocr_pdf(pdf_file, max_workers=4):
+    """Main function to process PDF with parallel processing"""
+    try:
+        # Load the PDF file content
+        pdf_content = pdf_file.read()
+        
+        # Convert PDF to images
+        images = convert_from_bytes(
+            pdf_content,
+            dpi=200,  # Lower DPI for faster processing
+            size=(1800, None)  # Max width of 1800px, height maintains aspect ratio
+        )
+        
         if not images:
             return None
-            
-        # Extract text from each image
-        texts = []
-        for img in images:
-            text = extract_text_from_image(reader, img)
-            if text:
-                texts.append(text.strip())  # Strip whitespace from each extracted text
-                
-        # Combine all texts and strip the final result
-        return " ".join(texts).strip() if texts else None
+        
+        # Initialize reader
+        reader = load_easyocr()
+        
+        # Create arguments for parallel processing
+        process_args = [(reader, img) for img in images]
+        
+        # Process pages in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            texts = list(executor.map(process_single_page, process_args))
+        
+        # Combine all texts
+        final_text = ' '.join(filter(None, texts)).strip()
+        
+        return final_text if final_text else None
         
     except Exception as e:
-        print(f"Failed to process the file: {e}")
+        st.error(f"Failed to process the file: {str(e)}")
         return None
