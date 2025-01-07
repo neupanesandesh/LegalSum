@@ -368,9 +368,10 @@ def process_ocr_pdf(pdf_file):
         for img in images:
             text = extract_text_from_image(reader, img)
             if text:
-                texts.append(text)
+                texts.append(text.strip())  # Strip whitespace from each extracted text
                 
-        return texts if texts else None
+        # Combine all texts and strip the final result
+        return " ".join(texts).strip() if texts else None
         
     except Exception as e:
         print(f"Failed to process the file: {e}")
