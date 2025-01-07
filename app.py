@@ -1976,82 +1976,82 @@ def main():
                     # Create progress placeholder
                     progress_placeholder = st.empty()
                     status_placeholder = st.empty()
+                    with st.container():
+                        if user_file_input.name.endswith('.pdf'):
+                            status_placeholder.info("Processing PDF... Please wait...")
+                            progress_bar = progress_placeholder.progress(0)
 
-                    if user_file_input.name.endswith('.pdf'):
-                        status_placeholder.info("Processing PDF... Please wait...")
-                        progress_bar = progress_placeholder.progress(0)
-
-                        # Process PDF
-                        # combined_text = None
-                        try:
-                            if is_image_based_pdf(user_file_input):
-                                status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
-                                progress_bar.progress(25)
-                                
-                                # Process OCR
-                                combined_text = process_ocr_pdf(user_file_input)
-                                progress_bar.progress(75)
-                                
-                                if combined_text:
-                                    user_input = combined_text
-                                    first_two_pages = extract_first_two_pages(combined_text)
+                            # Process PDF
+                            # combined_text = None
+                            try:
+                                if is_image_based_pdf(user_file_input):
+                                    status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
+                                    progress_bar.progress(25)
+                                    
+                                    # Process OCR
+                                    combined_text = process_ocr_pdf(user_file_input)
+                                    progress_bar.progress(75)
+                                    
+                                    if combined_text:
+                                        user_input = combined_text
+                                        first_two_pages = extract_first_two_pages(combined_text)
+                                    else:
+                                        st.error("OCR extraction failed. The PDF might contain unclear images.")
+                                        user_input = None
+                                        first_two_pages = None
+                                        show_additional_inputs = False
                                 else:
-                                    st.error("OCR extraction failed. The PDF might contain unclear images.")
-                                    user_input = None
-                                    first_two_pages = None
-                                    show_additional_inputs = False
-                            else:
-                                combined_text = extract_text_from_pdf(user_file_input)
-                                progress_bar.progress(50)
-                                status_placeholder.info("Extracting text from PDF...")
-                                if combined_text:
-                                    user_input = combined_text 
-                                    first_two_pages = extract_first_two_pages(combined_text)
+                                    combined_text = extract_text_from_pdf(user_file_input)
+                                    progress_bar.progress(50)
+                                    status_placeholder.info("Extracting text from PDF...")
+                                    if combined_text:
+                                        user_input = combined_text 
+                                        first_two_pages = extract_first_two_pages(combined_text)
+                                    # progress_bar.progress(90)
+                            except Exception as e:
+                                st.error(f"Error processing PDF: {str(e)}")
+                                user_input = None
+                                first_two_pages = None
+                                show_additional_inputs = False
+
+                        elif user_file_input.name.endswith('.docx'):
+                            status_placeholder.info("Processing DOCX... Please wait...")
+                            progress_bar = progress_placeholder.progress(0)
+                            # combined_text = None
+                            try:
+                                if is_image_based_docx(user_file_input):
+                                    status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
+                                    progress_bar.progress(25)
+                                    pdf_file = convert_docx_to_pdf(user_file_input)
+                                    combined_text = process_ocr_pdf(pdf_file)
+                                    progress_bar.progress(75)
+                                    
+                                    if combined_text:
+                                        user_input = combined_text
+                                        first_two_pages = extract_first_two_pages(combined_text)
+                                    else:
+                                        st.error("OCR extraction failed. The DOCX might contain unclear images.")
+                                        user_input = None
+                                        first_two_pages = None
+                                        show_additional_inputs = False     
+                                # combined_text = extract_text_from_docx(user_file_input)
                                 # progress_bar.progress(90)
-                        except Exception as e:
-                            st.error(f"Error processing PDF: {str(e)}")
-                            user_input = None
-                            first_two_pages = None
-                            show_additional_inputs = False
-
-                    elif user_file_input.name.endswith('.docx'):
-                        status_placeholder.info("Processing DOCX... Please wait...")
-                        progress_bar = progress_placeholder.progress(0)
-                        # combined_text = None
-                        try:
-                            if is_image_based_docx(user_file_input):
-                                status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
-                                progress_bar.progress(25)
-                                pdf_file = convert_docx_to_pdf(user_file_input)
-                                combined_text = process_ocr_pdf(pdf_file)
-                                progress_bar.progress(75)
-                                
-                                if combined_text:
-                                    user_input = combined_text
-                                    first_two_pages = extract_first_two_pages(combined_text)
                                 else:
-                                    st.error("OCR extraction failed. The DOCX might contain unclear images.")
-                                    user_input = None
-                                    first_two_pages = None
-                                    show_additional_inputs = False     
-                            # combined_text = extract_text_from_docx(user_file_input)
-                            # progress_bar.progress(90)
-                            else:
-                                status_placeholder.info("Extracting text from DOCX...")
-                                progress_bar.progress(50)
-                                combined_text = extract_text_from_docx(user_file_input)
-                                progress_bar.progress(70)
-                                if combined_text:
-                                    user_input = combined_text
-                                    first_two_pages = extract_first_two_pages(combined_text)
-                                else:
-                                    st.error("Could not extract text from the DOCX file.")
-                                    user_input = None
-                                    first_two_pages = None
-                                    show_additional_inputs = False    
-                        except Exception as e:
-                            st.error(f"Error processing DOCX: {str(e)}")
-                            show_additional_inputs = False
+                                    status_placeholder.info("Extracting text from DOCX...")
+                                    progress_bar.progress(50)
+                                    combined_text = extract_text_from_docx(user_file_input)
+                                    progress_bar.progress(70)
+                                    if combined_text:
+                                        user_input = combined_text
+                                        first_two_pages = extract_first_two_pages(combined_text)
+                                    else:
+                                        st.error("Could not extract text from the DOCX file.")
+                                        user_input = None
+                                        first_two_pages = None
+                                        show_additional_inputs = False    
+                            except Exception as e:
+                                st.error(f"Error processing DOCX: {str(e)}")
+                                show_additional_inputs = False
                 else:
                     st.warning("No file uploaded. Please upload a document.")
                     user_input = None
