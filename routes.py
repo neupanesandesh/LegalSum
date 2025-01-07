@@ -349,6 +349,31 @@ def load_easyocr():
     """Initialize EasyOCR reader with caching to prevent reloading"""
     return easyocr.Reader(['en'], gpu=False)
 
+def resize_image(image, max_width=1000):
+    """Resize image while maintaining aspect ratio"""
+    width_percent = (max_width / float(image.size[0]))
+    height_size = int((float(image.size[1]) * float(width_percent)))
+    return image.resize((max_width, height_size), Image.ANTIALIAS)
+
+def convert_to_grayscale(image):
+    """Convert image to grayscale"""
+    return image.convert('L')
+
+def extract_images_from_pdf(pdf_file):
+    """Extract images from each page of the PDF"""
+    pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")
+    images = []
+    for page_num in range(len(pdf_document)):
+        page = pdf_document.load_page(page_num)
+        pix = page.get_pixmap()
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        images.append(img)
+    return images
+
+def extract_text_from_image(reader, image):
+    """Extract text from a single image using OCR"""
+    return reader.readtext(image, detail=0)
+
 def process_ocr_pdf(pdf_file):
     """Main function to process PDF and extract text using OCR."""
     try:
@@ -362,11 +387,13 @@ def process_ocr_pdf(pdf_file):
         images = extract_images_from_pdf(pdf_file)
         if not images:
             return None
-            
-        # Extract text from each image
+        
+        # Optimize and extract text from each image
         texts = []
         for img in images:
-            text = extract_text_from_image(reader, img)
+            resized_img = resize_image(img)
+            grayscale_img = convert_to_grayscale(resized_img)
+            text = extract_text_from_image(reader, grayscale_img)
             if text:
                 texts.append(text.strip())  # Strip whitespace from each extracted text
                 
@@ -376,3 +403,4 @@ def process_ocr_pdf(pdf_file):
     except Exception as e:
         print(f"Failed to process the file: {e}")
         return None
+
