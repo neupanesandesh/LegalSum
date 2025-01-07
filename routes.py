@@ -304,11 +304,15 @@ def create_docx(data_list):
 
     return doc_path
 
+@st.cache_resource
+def load_easyocr():
+    """Initialize EasyOCR reader with caching to prevent reloading"""
+    return easyocr.Reader(['en'], gpu=False)
 
 def extract_image_from_page(pdf_document, page_num):
     """Extract image from a single PDF page."""
     try:
-        page = pdf_document[page_num]
+        page = pdf_document.load_page(page_num)
         pix = page.get_pixmap(matrix=fitz.Matrix(100/72, 100/72))
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
         return np.array(img)
@@ -335,6 +339,19 @@ def extract_images_from_pdf(pdf_file):
         print(f"Error extracting images from PDF: {e}")
         return []
 
+def enhance_image(image):
+    """Enhance the image quality for better OCR results."""
+    # Convert to grayscale
+    grayscale_img = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    
+    # Apply Gaussian blur to reduce noise
+    blurred_img = cv2.GaussianBlur(grayscale_img, (5, 5), 0)
+    
+    # Use adaptive thresholding to binarize the image
+    enhanced_img = cv2.adaptiveThreshold(blurred_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                         cv2.THRESH_BINARY, 11, 2)
+    return enhanced_img
+
 def extract_text_from_image(reader, image_np):
     """Extract text from a single image using EasyOCR."""
     try:
@@ -344,24 +361,6 @@ def extract_text_from_image(reader, image_np):
     except Exception as e:
         print(f"Error extracting text from image: {e}")
         return ""
-
-@st.cache_resource
-def load_easyocr():
-    """Initialize EasyOCR reader with caching to prevent reloading"""
-    return easyocr.Reader(['en'], gpu=False)
-
-def enhance_image(image):
-    """Enhance the image quality for better OCR results."""
-    # Convert to grayscale
-    grayscale_img = np.array(image.convert('L'))
-    
-    # Apply Gaussian blur to reduce noise
-    blurred_img = cv2.GaussianBlur(grayscale_img, (5, 5), 0)
-    
-    # Use adaptive thresholding to binarize the image
-    enhanced_img = cv2.adaptiveThreshold(blurred_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                         cv2.THRESH_BINARY, 11, 2)
-    return Image.fromarray(enhanced_img)
 
 def process_ocr_pdf(pdf_file):
     """Main function to process PDF and extract text using OCR."""
@@ -391,3 +390,4 @@ def process_ocr_pdf(pdf_file):
     except Exception as e:
         print(f"Failed to process the file: {e}")
         return None
+
