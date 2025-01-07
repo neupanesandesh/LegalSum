@@ -12,6 +12,7 @@ import easyocr
 from PIL import Image
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
+import cv2
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -349,30 +350,18 @@ def load_easyocr():
     """Initialize EasyOCR reader with caching to prevent reloading"""
     return easyocr.Reader(['en'], gpu=False)
 
-def resize_image(image, max_width=1000):
-    """Resize image while maintaining aspect ratio"""
-    width_percent = (max_width / float(image.size[0]))
-    height_size = int((float(image.size[1]) * float(width_percent)))
-    return image.resize((max_width, height_size), Image.ANTIALIAS)
-
-def convert_to_grayscale(image):
-    """Convert image to grayscale"""
-    return image.convert('L')
-
-def extract_images_from_pdf(pdf_file):
-    """Extract images from each page of the PDF"""
-    pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")
-    images = []
-    for page_num in range(len(pdf_document)):
-        page = pdf_document.load_page(page_num)
-        pix = page.get_pixmap()
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-        images.append(img)
-    return images
-
-def extract_text_from_image(reader, image):
-    """Extract text from a single image using OCR"""
-    return reader.readtext(image, detail=0)
+def enhance_image(image):
+    """Enhance the image quality for better OCR results."""
+    # Convert to grayscale
+    grayscale_img = np.array(image.convert('L'))
+    
+    # Apply Gaussian blur to reduce noise
+    blurred_img = cv2.GaussianBlur(grayscale_img, (5, 5), 0)
+    
+    # Use adaptive thresholding to binarize the image
+    enhanced_img = cv2.adaptiveThreshold(blurred_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                         cv2.THRESH_BINARY, 11, 2)
+    return Image.fromarray(enhanced_img)
 
 def process_ocr_pdf(pdf_file):
     """Main function to process PDF and extract text using OCR."""
@@ -388,12 +377,11 @@ def process_ocr_pdf(pdf_file):
         if not images:
             return None
         
-        # Optimize and extract text from each image
+        # Enhance and extract text from each image
         texts = []
         for img in images:
-            resized_img = resize_image(img)
-            grayscale_img = convert_to_grayscale(resized_img)
-            text = extract_text_from_image(reader, grayscale_img)
+            enhanced_img = enhance_image(img)
+            text = extract_text_from_image(reader, enhanced_img)
             if text:
                 texts.append(text.strip())  # Strip whitespace from each extracted text
                 
@@ -403,4 +391,3 @@ def process_ocr_pdf(pdf_file):
     except Exception as e:
         print(f"Failed to process the file: {e}")
         return None
-
