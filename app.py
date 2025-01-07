@@ -1965,8 +1965,6 @@ def main():
             
             if 'last_processed_file' not in st.session_state:
                 st.session_state.last_processed_file = None
-            if 'last_processed_text' not in st.session_state:
-                st.session_state.last_processed_text = None
                 
             if choice1 == 'Copy-Paste Text':
                 user_input = st.text_area("Enter legal decision:", height=150)
@@ -2002,7 +2000,6 @@ def main():
                                         user_input = combined_text
                                         first_two_pages = extract_first_two_pages(combined_text)
                                         st.session_state.last_processed_file = user_file_input.name
-                                        st.session_state.last_processed_text = combined_text
                                     else:
                                         st.error("OCR extraction failed. The PDF might contain unclear images.")
                                         first_two_pages = None
@@ -2016,7 +2013,7 @@ def main():
                                         user_input = combined_text 
                                         first_two_pages = extract_first_two_pages(combined_text)
                                         st.session_state.last_processed_file = user_file_input.name
-                                        st.session_state.last_processed_text = combined_text
+                                        
                                     # progress_bar.progress(90)
                             except Exception as e:
                                 st.error(f"Error processing PDF: {str(e)}")
@@ -2040,8 +2037,6 @@ def main():
                                         user_input = combined_text
                                         first_two_pages = extract_first_two_pages(combined_text)
                                         st.session_state.last_processed_file = user_file_input.name
-                                        st.session_state.last_processed_text = combined_text
-                                        
                                         
                                     else:
                                         st.error("OCR extraction failed. The DOCX might contain unclear images.")
@@ -2059,8 +2054,6 @@ def main():
                                         user_input = combined_text
                                         first_two_pages = extract_first_two_pages(combined_text)
                                         st.session_state.last_processed_file = user_file_input.name
-                                        st.session_state.last_processed_text = combined_text
-                                        
                                     else:
                                         st.error("Could not extract text from the DOCX file.")
                                         first_two_pages = None
