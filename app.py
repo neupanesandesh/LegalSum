@@ -1985,7 +1985,7 @@ def main():
             elif choice1 == 'Upload Document':
                 user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
 
-                if user_file_input is not None and st.button("Process Document"):
+                if user_file_input is not None:
                     # Create progress placeholder
                     progress_placeholder = st.empty()
                     status_placeholder = st.empty()
@@ -2045,7 +2045,7 @@ def main():
 
             user_input = st.session_state.user_input
             first_two_pages = st.session_state.first_two_pages
-            
+            show_additional_inputs = True
             # Only show additional inputs if we have valid text and processing is complete
             if show_additional_inputs:
                 if role == "user":
