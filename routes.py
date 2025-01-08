@@ -363,17 +363,16 @@ def process_ocr_pdf(pdf_file):
         images = extract_images_from_pdf(pdf_file)
         if not images:
             return None
-
-        # Extract text from each image concurrently
+            
+        # Extract text from each image
         texts = []
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(extract_text_from_image, reader, img) for img in images]
-            for future in futures:
-                result = future.result()
-                if result:
-                    texts.append(result)
+        for img in images:
+            text = extract_text_from_image(reader, img)
+            if text:
+                texts.append(text.strip())  # Strip whitespace from each extracted text
 
-        return texts if texts else None
+        # Combine all texts and strip the final result
+        return " ".join(texts).strip() if texts else None
 
     except Exception as e:
         print(f"Failed to process the file: {e}")
