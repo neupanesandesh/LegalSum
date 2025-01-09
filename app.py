@@ -1975,72 +1975,67 @@ def main():
                 user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
 
                 if user_file_input is not None:
-                    # Check if the file has already been processed
-                    if 'uploaded_file_name' not in st.session_state or st.session_state.uploaded_file_name != user_file_input.name:
-                        # Create progress placeholder
-                        progress_placeholder = st.empty()
-                        status_placeholder = st.empty()
+                    # Check if the file has already been processed                        # Create progress placeholder
+                    progress_placeholder = st.empty()
+                    status_placeholder = st.empty()
 
-                        if user_file_input.name.endswith('.pdf'):
-                            status_placeholder.info("Processing PDF... Please wait...")
-                            progress_bar = progress_placeholder.progress(10)
-                            try:
-                                if is_image_based_pdf(user_file_input):
-                                    status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
-                                    progress_bar.progress(25)
-                                    combined_text = process_ocr_pdf(user_file_input)
-                                    progress_bar.progress(75)
-                                else:
-                                    progress_bar.progress(25)
-                                    combined_text = extract_text_from_pdf(user_file_input)
-                                    progress_bar.progress(75)
+                    if user_file_input.name.endswith('.pdf'):
+                        status_placeholder.info("Processing PDF... Please wait...")
+                        progress_bar = progress_placeholder.progress(10)
+                        try:
+                            if is_image_based_pdf(user_file_input):
+                                status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
+                                progress_bar.progress(25)
+                                combined_text = process_ocr_pdf(user_file_input)
+                                progress_bar.progress(75)
+                            else:
+                                progress_bar.progress(25)
+                                combined_text = extract_text_from_pdf(user_file_input)
+                                progress_bar.progress(75)
 
-                                st.session_state.processed_text = combined_text
-                                st.session_state.first_two_pages = extract_first_two_pages(combined_text)
-                                st.session_state.uploaded_file_name = user_file_input.name  # Store file name in session state
-                                show_additional_inputs = True
-                                progress_bar.progress(100)
-                                status_placeholder.success("Processing complete!")
+                            st.session_state.processed_text = combined_text
+                            st.session_state.first_two_pages = extract_first_two_pages(combined_text)
+                            st.session_state.uploaded_file_name = user_file_input.name  # Store file name in session state
+                            show_additional_inputs = True
+                            progress_bar.progress(100)
+                            status_placeholder.success("Processing complete!")
 
-                            except Exception as e:
-                                st.error(f"Error processing PDF: {str(e)}")
-                                st.session_state.processed_text = None
-                                st.session_state.first_two_pages = None
-                                st.session_state.uploaded_file_name = None
-                                show_additional_inputs = False
+                        except Exception as e:
+                            st.error(f"Error processing PDF: {str(e)}")
+                            st.session_state.processed_text = None
+                            st.session_state.first_two_pages = None
+                            st.session_state.uploaded_file_name = None
+                            show_additional_inputs = False
 
-                        elif user_file_input.name.endswith('.docx'):
-                            status_placeholder.info("Processing DOCX... Please wait...")
-                            progress_bar = progress_placeholder.progress(0)
-                            try:
-                                if is_image_based_docx(user_file_input):
-                                    status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
-                                    progress_bar.progress(25)
-                                    pdf_file = convert_docx_to_pdf(user_file_input)
-                                    combined_text = process_ocr_pdf(pdf_file)
-                                    progress_bar.progress(75)
-                                else:
-                                    status_placeholder.info("Extracting text from DOCX...")
-                                    progress_bar.progress(50)
-                                    combined_text = extract_text_from_docx(user_file_input)
-                                    progress_bar.progress(70)
+                    elif user_file_input.name.endswith('.docx'):
+                        status_placeholder.info("Processing DOCX... Please wait...")
+                        progress_bar = progress_placeholder.progress(0)
+                        try:
+                            if is_image_based_docx(user_file_input):
+                                status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
+                                progress_bar.progress(25)
+                                pdf_file = convert_docx_to_pdf(user_file_input)
+                                combined_text = process_ocr_pdf(pdf_file)
+                                progress_bar.progress(75)
+                            else:
+                                status_placeholder.info("Extracting text from DOCX...")
+                                progress_bar.progress(50)
+                                combined_text = extract_text_from_docx(user_file_input)
+                                progress_bar.progress(70)
 
-                                st.session_state.processed_text = combined_text
-                                st.session_state.first_two_pages = extract_first_two_pages(combined_text)
-                                st.session_state.uploaded_file_name = user_file_input.name  # Store file name in session state
-                                show_additional_inputs = True
-                                progress_bar.progress(100)
-                                status_placeholder.success("Processing complete!")
+                            st.session_state.processed_text = combined_text
+                            st.session_state.first_two_pages = extract_first_two_pages(combined_text)
+                            st.session_state.uploaded_file_name = user_file_input.name  # Store file name in session state
+                            show_additional_inputs = True
+                            progress_bar.progress(100)
+                            status_placeholder.success("Processing complete!")
 
-                            except Exception as e:
-                                st.error(f"Error processing DOCX: {str(e)}")
-                                st.session_state.processed_text = None
-                                st.session_state.first_two_pages = None
-                                st.session_state.uploaded_file_name = None
-                                show_additional_inputs = False
-                    else:
-                        st.info("File already processed.")
-                        show_additional_inputs = True
+                        except Exception as e:
+                            st.error(f"Error processing DOCX: {str(e)}")
+                            st.session_state.processed_text = None
+                            st.session_state.first_two_pages = None
+                            st.session_state.uploaded_file_name = None
+                            show_additional_inputs = False
                 else:
                     show_additional_inputs = False
 
@@ -2048,7 +2043,7 @@ def main():
             user_input = st.session_state.processed_text
             first_two_pages = st.session_state.first_two_pages      
             # Only show additional inputs if we have valid text
-            if show_additional_inputs and st.session_state.processed_text is not None:
+            if show_additional_inputs:
                 if role == "user":
                     try:
                         states = roles_config["usernames"][username]["states"]
@@ -2069,7 +2064,6 @@ def main():
                 else:
                     page_count = None
                 if st.button("Summarize"):
-                    show_additional_inputs = False
                     if state == "New Jersey":
 
                         # Display the generated summary
