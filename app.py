@@ -2057,9 +2057,9 @@ def main():
                         page_count = None
                 else:
                     page_count = None
-                user_input = st.session_state.processed_text
-                first_two_pages = st.session_state.first_two_pages  
                 if st.button("Summarize"):
+                    user_input = st.session_state.processed_text
+                    first_two_pages = st.session_state.first_two_pages  
                     if state == "New Jersey":
 
                         # Display the generated summary
