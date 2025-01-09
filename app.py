@@ -1976,265 +1976,233 @@ def main():
 
             choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
 
-            # Initialize variables
+            # Initialize session state for file processing
+            if "file_data" not in st.session_state:
+                st.session_state["file_data"] = {"user_input": None, "first_two_pages": None}
+
             show_additional_inputs = True
-            user_input = None
-            first_two_pages = None
-            uploaded_file = None
 
             if choice1 == 'Copy-Paste Text':
                 user_input = st.text_area("Enter legal decision:", height=150)
-                if user_input:
-                    first_two_pages = extract_first_two_pages(user_input)
-                    show_additional_inputs = True
-                else:
-                    show_additional_inputs = False
+                first_two_pages = extract_first_two_pages(user_input)
+                st.session_state["file_data"] = {"user_input": user_input, "first_two_pages": first_two_pages}
 
             elif choice1 == 'Upload Document':
-                uploaded_file = st.file_uploader("Upload your document", type=["pdf", "docx"])
-                if uploaded_file is None:
-                    st.warning("No file uploaded. Please upload a document.")
-                    show_additional_inputs = False
+                user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
+
+                if user_file_input is not None:
+                    st.session_state["file_data"]["user_file"] = user_file_input
+                    st.success("File uploaded. Press 'Summarize' to process.")
+
+            # Get states and page count
+            if role == "user":
+                try:
+                    states = roles_config["usernames"][username]["states"]
+                except:
+                    states = []
+            else:
+                states = ["New Jersey", "Texas", "Connecticut"]
+
+            state = st.selectbox("Select a US State:", states)
+
+            page_count = None
+            if state != "Texas":
+                page_count_input = st.text_input("Page count:", value="1")
+                if is_positive_integer(page_count_input):
+                    page_count = int(page_count_input)
                 else:
-                    show_additional_inputs = True
+                    st.error("Please enter a valid positive integer for the page count.")
 
-            if show_additional_inputs:
-                if role == "user":
-                    try:
-                        states = roles_config["usernames"][username]["states"]
-                    except:
-                        states = []
-                else:
-                    states = ["New Jersey", "Texas", "Connecticut"]
+            # Summarize button
+            if st.button("Summarize"):
+                file_data = st.session_state["file_data"]
+                user_input = file_data.get("user_input")
+                first_two_pages = file_data.get("first_two_pages")
+                user_file = file_data.get("user_file")
 
-                state = st.selectbox("Select a US State:", states)
-
-                if state != "Texas":
-                    page_count_input = st.text_input("Page count:", value="1")
-                    if is_positive_integer(page_count_input):
-                        page_count = int(page_count_input)
-                    else:
-                        st.error("Please enter a valid positive integer for the page count.")
-                        page_count = None
-                else:
-                    page_count = None
-
-                if st.button("Summarize"):
-                    # Process file only after button click
-                    if choice1 == 'Upload Document' and uploaded_file is not None:
-                        progress_placeholder = st.empty()
-                        status_placeholder = st.empty()
-                        
-                        with st.container():
-                            if uploaded_file.name.endswith('.pdf'):
-                                status_placeholder.info("Processing PDF... Please wait...")
-                                progress_bar = progress_placeholder.progress(0)
-                                
-                                try:
-                                    if is_image_based_pdf(uploaded_file):
-                                        status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
-                                        progress_bar.progress(25)
-                                        combined_text = process_ocr_pdf(uploaded_file)
-                                        progress_bar.progress(75)
-                                    else:
-                                        combined_text = extract_text_from_pdf(uploaded_file)
-                                        progress_bar.progress(50)
-                                        status_placeholder.info("Extracting text from PDF...")
-                                    
-                                    if combined_text:
-                                        user_input = combined_text
-                                        first_two_pages = extract_first_two_pages(combined_text)
-                                    else:
-                                        st.error("Text extraction failed.")
-                                        return
-
-                                except Exception as e:
-                                    st.error(f"Error processing PDF: {str(e)}")
-                                    return
-
-                            elif uploaded_file.name.endswith('.docx'):
-                                status_placeholder.info("Processing DOCX... Please wait...")
-                                progress_bar = progress_placeholder.progress(0)
-                                
-                                try:
-                                    if is_image_based_docx(uploaded_file):
-                                        status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
-                                        progress_bar.progress(25)
-                                        pdf_file = convert_docx_to_pdf(uploaded_file)
-                                        combined_text = process_ocr_pdf(pdf_file)
-                                        progress_bar.progress(75)
-                                    else:
-                                        status_placeholder.info("Extracting text from DOCX...")
-                                        progress_bar.progress(50)
-                                        combined_text = extract_text_from_docx(uploaded_file)
-                                        progress_bar.progress(70)
-                                    
-                                    if combined_text:
-                                        user_input = combined_text
-                                        first_two_pages = extract_first_two_pages(combined_text)
-                                    else:
-                                        st.error("Could not extract text from the DOCX file.")
-                                        return
-
-                                except Exception as e:
-                                    st.error(f"Error processing DOCX: {str(e)}")
-                                    return
-
-                    # Continue with summarization if we have valid input
-                    if user_input and first_two_pages:
-                        if state == "New Jersey":
-                            summary = text_summarizer_alternate(user_input)
-                            print(summary)
-                    
-                            summary = summary.replace("District Court", "district court")
-                            st.subheader("Summary:")
-
-                            # Type of case federal or State
-                            federal_response = client.chat.completions.create(
-                                model=GPTModel,
-                                temperature=0.2,
-                                max_tokens=16,
-                                messages=[
-                                    {"role": "system", "content": """
-                                    
-                                    Determine if the legal case, if related to a state or federal case, the federal cases are these 
-                                    Bankr. D.N.J. (U.S Bankruptcy Court) 6
-                                    D.N.J. (U.S. District Court) - 7
-                                    3d Cir. (Third Circuit) – 8
-                                    
-                                    If that's a federal case just return Federal, nothing else, if it's a state just retrun State nothing else.
-                                    """},
-                                    {"role": "user", "content": user_input}
-                                ]
-                            )
-
-                            # Append the court date to the summary
-                            court_type = federal_response.choices[0].message.content.strip()
-
-
-                            # Extract the court date
-                            date_response = client.chat.completions.create(
-                                model=GPTModel,
-                                temperature=0.2,
-                                max_tokens=16,
-                                messages=[
-                                    {"role": "system", "content": "Check filed date, usually it is at the top of the document, American date format, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
-                                    {"role": "user", "content": user_input}
-                                ]
-                            )
-
-                            # Append the court date to the summary
-                            court_date = date_response.choices[0].message.content.strip()
-                            
-                            if court_type =="Federal":
-                                summary = summary + " [Filed " + court_date + "]"
-                            
-                            # judge
-                            prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam. If it 's a federal case and district case, replace the first name by : U.S.D.J. Else if it 's a federal case and magistrate case, replace the first name by : U.S.M.J."
-
-                            judge_response = client.chat.completions.create(
-                            model = GPTModel,
-                            temperature = 0.0,
-                            max_tokens = 600,
-                            messages = [
-                                {"role": "system", "content": prompt_judge},
-                                {"role": "user", "content": user_input}
-                                ]
-                            )
-                            
-                            judge_name ="" 
-                            
-                            if judge_response.choices[0].message.content =="per curiam" :
-                                judge_name = "per curiam"
-                            elif "U.S.D.J." in judge_response.choices[0].message.content:
-                                name = HumanName(judge_response.choices[0].message.content)
-                                judge_name = name.last + ", U.S.D.J."
-                                
-                            elif "U.S.M.J." in judge_response.choices[0].message.content:
-                                name = HumanName(judge_response.choices[0].message.content)
-                                judge_name = name.last + ", U.S.M.J."
-                                
+                if user_file is not None and user_input is None:
+                    # Process the file only when Summarize is clicked
+                    with st.spinner("Processing file... Please wait."):
+                        if user_file.name.endswith('.pdf'):
+                            if is_image_based_pdf(user_file):
+                                combined_text = process_ocr_pdf(user_file)
                             else:
-                                name = HumanName(judge_response.choices[0].message.content)
-                                judge_name = name.last + ", J."  #.capitalize()
-                            
-                            summary = " (" + judge_name + ") (" + str(page_count) + " pp.) "  + summary 
-                            print (judge_response.choices[0].message.content)
-                            
-                            # court option
-                            
-                            courts = {
-                                    'N.J.': 1,
-
-                                    '3d Cir.': 8
-                                    }
-                            courts_inverted = {value: key for key, value in courts.items()}
-
-                            
-                            prompt_court_option = ('I will send you a legal decision and you have to select one of these court option, just return the corresponding number, nothing else, here are the court option :' 
-                                'N.J. Sup. Ct. (Supreme Court) - 1 ')
-
-                            
-                            court_response = client.chat.completions.create(
-                            model = GPTModel,
-                            temperature = 0.2,
-                            max_tokens = 600,
-                            messages = [
-                                {"role": "system", "content": prompt_court_option},
-                                {"role": "user", "content": first_two_pages}
-                                ]
-                            )
-                            print (court_response.choices[0].message.content)
-                            summary = courts_inverted[int(court_response.choices[0].message.content)] + " "  + summary
-                            
-                            title_case = (f"*{title(first_two_pages)}*")
-                            
-                            
-                            summary = title_case + ", "  + summary 
-                            
-                            # taxonomy
-                            prompt_taxonomy = """ I will give you a table with taxonomy , read the legal case, just return the corresponding number , nothing else. here is the table :
-                                NJ topic #	NJ Taxonomy Topics
-                                01	Administrative Law
-                                54	Admiralty
-                                59	Antitrust
-
-                                """
-
-                            taxonomy_response = client.chat.completions.create(
-                            model = GPTModel,
-                            temperature = 0.2,
-                            max_tokens = 600,
-                            messages = [
-                                {"role": "system", "content": prompt_taxonomy},
-                                {"role": "user", "content": user_input}
-                                ]
-                            )
-                            print (taxonomy_response.choices[0].message.content)
-                            summary = taxonomy_response.choices[0].message.content + "-" + court_response.choices[0].message.content + "-XXXX " + summary
-                            
-                            hash_table = {
-                                "01": "Administrative Law",
-                                "54": "Admiralty",
-                                "59": "Antitrust",
-                                "06": "Banking and Finance Laws",
-
-                            }
-                            
-                            legal_category = hash_table.get(taxonomy_response.choices[0].message.content, "Unknown code").upper()
-                            
-                            st.markdown(f"**{legal_category}**")
-                            st.write(summary)
-                        elif state =="Connecticut":
-                            st.subheader("Summary:")
-                            st.write(Connecticut_summarizer(user_input))
-                        elif state == "Texas":
-                            st.subheader("Summary:")
-                            st.write(Texas_summarizer(user_input))
+                                combined_text = extract_text_from_pdf(user_file)
+                        elif user_file.name.endswith('.docx'):
+                            if is_image_based_docx(user_file):
+                                pdf_file = convert_docx_to_pdf(user_file)
+                                combined_text = process_ocr_pdf(pdf_file)
+                            else:
+                                combined_text = extract_text_from_docx(user_file)
+                        
+                        if combined_text:
+                            user_input = combined_text
+                            first_two_pages = extract_first_two_pages(combined_text)
                         else:
-                            st.warning("Please select a state before clicking 'Summarize'.")
+                            st.error("Failed to process the uploaded document.")
+                            return
+
+                        # Update session state with processed data
+                        st.session_state["file_data"] = {"user_input": user_input, "first_two_pages": first_two_pages}
+
+                # Ensure user_input is available before proceeding
+                if not user_input:
+                    st.error("Please provide or process the input text before summarizing.")
+                if state == "New Jersey":
+
+                    # Display the generated summary
+                    summary = text_summarizer_alternate(user_input) 
+
+
+                    print(summary)
+                    
+                    summary = summary.replace("District Court", "district court")
+                    st.subheader("Summary:")
+
+                    # Type of case federal or State
+                    federal_response = client.chat.completions.create(
+                        model=GPTModel,
+                        temperature=0.2,
+                        max_tokens=16,
+                        messages=[
+                            {"role": "system", "content": """
+                            
+                            Determine if the legal case, if related to a state or federal case, the federal cases are these 
+                            Bankr. D.N.J. (U.S Bankruptcy Court) 6
+                            D.N.J. (U.S. District Court) - 7
+                            3d Cir. (Third Circuit) – 8
+                            
+                            If that's a federal case just return Federal, nothing else, if it's a state just retrun State nothing else.
+                            """},
+                            {"role": "user", "content": user_input}
+                        ]
+                    )
+
+                    # Append the court date to the summary
+                    court_type = federal_response.choices[0].message.content.strip()
+
+
+                    # Extract the court date
+                    date_response = client.chat.completions.create(
+                        model=GPTModel,
+                        temperature=0.2,
+                        max_tokens=16,
+                        messages=[
+                            {"role": "system", "content": "Check filed date, usually it is at the top of the document, American date format, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
+                            {"role": "user", "content": user_input}
+                        ]
+                    )
+
+                    # Append the court date to the summary
+                    court_date = date_response.choices[0].message.content.strip()
+                    
+                    if court_type =="Federal":
+                        summary = summary + " [Filed " + court_date + "]"
+                    
+                    # judge
+                    prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam. If it 's a federal case and district case, replace the first name by : U.S.D.J. Else if it 's a federal case and magistrate case, replace the first name by : U.S.M.J."
+
+                    judge_response = client.chat.completions.create(
+                    model = GPTModel,
+                    temperature = 0.0,
+                    max_tokens = 600,
+                    messages = [
+                        {"role": "system", "content": prompt_judge},
+                        {"role": "user", "content": user_input}
+                        ]
+                    )
+                    
+                    judge_name ="" 
+                    
+                    if judge_response.choices[0].message.content =="per curiam" :
+                        judge_name = "per curiam"
+                    elif "U.S.D.J." in judge_response.choices[0].message.content:
+                        name = HumanName(judge_response.choices[0].message.content)
+                        judge_name = name.last + ", U.S.D.J."
+                        
+                    elif "U.S.M.J." in judge_response.choices[0].message.content:
+                        name = HumanName(judge_response.choices[0].message.content)
+                        judge_name = name.last + ", U.S.M.J."
+                        
                     else:
-                        st.error("No valid input text to process. Please check your input.")            
+                        name = HumanName(judge_response.choices[0].message.content)
+                        judge_name = name.last + ", J."  #.capitalize()
+                    
+                    summary = " (" + judge_name + ") (" + str(page_count) + " pp.) "  + summary 
+                    print (judge_response.choices[0].message.content)
+                    
+                    # court option
+                    
+                    courts = {
+                            'N.J.': 1,
+
+                            '3d Cir.': 8
+                            }
+                    courts_inverted = {value: key for key, value in courts.items()}
+
+                    
+                    prompt_court_option = ('I will send you a legal decision and you have to select one of these court option, just return the corresponding number, nothing else, here are the court option :' 
+                        'N.J. Sup. Ct. (Supreme Court) - 1 ')
+
+                    
+                    court_response = client.chat.completions.create(
+                    model = GPTModel,
+                    temperature = 0.2,
+                    max_tokens = 600,
+                    messages = [
+                        {"role": "system", "content": prompt_court_option},
+                        {"role": "user", "content": first_two_pages}
+                        ]
+                    )
+                    print (court_response.choices[0].message.content)
+                    summary = courts_inverted[int(court_response.choices[0].message.content)] + " "  + summary
+                    
+                    title_case = (f"*{title(first_two_pages)}*")
+                    
+                    
+                    summary = title_case + ", "  + summary 
+                    
+                    # taxonomy
+                    prompt_taxonomy = """ I will give you a table with taxonomy , read the legal case, just return the corresponding number , nothing else. here is the table :
+                        NJ topic #	NJ Taxonomy Topics
+                        01	Administrative Law
+                        54	Admiralty
+                        59	Antitrust
+
+                        """
+
+                    taxonomy_response = client.chat.completions.create(
+                    model = GPTModel,
+                    temperature = 0.2,
+                    max_tokens = 600,
+                    messages = [
+                        {"role": "system", "content": prompt_taxonomy},
+                        {"role": "user", "content": user_input}
+                        ]
+                    )
+                    print (taxonomy_response.choices[0].message.content)
+                    summary = taxonomy_response.choices[0].message.content + "-" + court_response.choices[0].message.content + "-XXXX " + summary
+                    
+                    hash_table = {
+                        "01": "Administrative Law",
+                        "54": "Admiralty",
+                        "59": "Antitrust",
+                        "06": "Banking and Finance Laws",
+
+                    }
+                    
+                    legal_category = hash_table.get(taxonomy_response.choices[0].message.content, "Unknown code").upper()
+                    
+                    st.markdown(f"**{legal_category}**")
+                    st.write(summary)
+                elif state =="Connecticut":
+                    st.subheader("Summary:")
+                    st.write(Connecticut_summarizer(user_input))
+                elif state == "Texas":
+                    st.subheader("Summary:")
+                    st.write(Texas_summarizer(user_input))
+                else:
+                    st.warning("Please select a state before clicking 'Summarize'.")
                 
         elif app_mode == "Newsletter Quotes":
 
