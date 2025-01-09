@@ -1998,7 +1998,6 @@ def main():
                             show_additional_inputs = True
                             st.session_state.file_processed = True
                             progress_bar.progress(100)
-                            status_placeholder.success("Processing complete!")
                             
                         except Exception as e:
                             st.error(f"Error processing PDF: {str(e)}")
@@ -2027,7 +2026,6 @@ def main():
                             show_additional_inputs = True
                             st.session_state.file_processed = True
                             progress_bar.progress(100)
-                            status_placeholder.success("Processing complete!")
                                 
                         except Exception as e:
                             st.error(f"Error processing DOCX: {str(e)}")
