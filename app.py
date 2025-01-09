@@ -1969,13 +1969,12 @@ def main():
             show_additional_inputs = True
             user_input = None
             first_two_pages = None
-    
+            
             if choice1 == 'Copy-Paste Text':
                 user_input = st.text_area("Enter legal decision:", height=150)
-                if user_input:
-                # first_two_pages = extract_first_two_pages(user_input)
-                    st.session_state.user_input = user_input
-                    st.session_state.first_two_pages = extract_first_two_pages(user_input)
+                first_two_pages = extract_first_two_pages(user_input)
+                    # st.session_state.user_input = user_input
+                    # st.session_state.first_two_pages = extract_first_two_pages(user_input)
             
                 # if "file_processed" not in st.session_state:
                 #     st.session_state.file_processed = False
@@ -2033,8 +2032,8 @@ def main():
                             show_additional_inputs = False
             
                     if combined_text:
-                        st.session_state.user_input = combined_text
-                        st.session_state.first_two_pages = extract_first_two_pages(combined_text)
+                        user_input = combined_text
+                        first_two_pages = extract_first_two_pages(combined_text)
                     else:
                         st.error("Failed to extract text from the document.")
                 else:
@@ -2042,10 +2041,6 @@ def main():
                     user_input = None
                     first_two_pages = None
                     show_additional_inputs = False
-
-            user_input = st.session_state.user_input
-            first_two_pages = st.session_state.first_two_pages
-            show_additional_inputs = True
             # Only show additional inputs if we have valid text and processing is complete
             if show_additional_inputs:
                 if role == "user":
