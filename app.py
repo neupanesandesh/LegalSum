@@ -1961,6 +1961,7 @@ def main():
             if 'processed_text' not in st.session_state:
                 st.session_state.processed_text = None
                 st.session_state.first_two_pages = None
+                st.session_state.file_processed = False
             
             show_additional_inputs = True
             
@@ -1995,6 +1996,7 @@ def main():
                             st.session_state.processed_text = combined_text
                             st.session_state.first_two_pages = extract_first_two_pages(combined_text)
                             show_additional_inputs = True
+                            st.session_state.file_processed = True
                             progress_bar.progress(100)
                             status_placeholder.success("Processing complete!")
                             
@@ -2023,6 +2025,7 @@ def main():
                             st.session_state.processed_text = combined_text
                             st.session_state.first_two_pages = extract_first_two_pages(combined_text)
                             show_additional_inputs = True
+                            st.session_state.file_processed = True
                             progress_bar.progress(100)
                             status_placeholder.success("Processing complete!")
                                 
@@ -2032,8 +2035,11 @@ def main():
                             st.session_state.first_two_pages = None
                             show_additional_inputs = False
                 
-                else: 
+                elif user_file_input is None:
                     show_additional_inputs = False
+                    st.session_state.file_processed = False
+                else:
+                    show_additional_inputs = True
                     
             user_input = st.session_state.processed_text
             first_two_pages = st.session_state.first_two_pages      
