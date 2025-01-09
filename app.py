@@ -1952,69 +1952,62 @@ def main():
                     with open('config.YAML', 'w') as file:
                         yaml.dump(config, file, default_flow_style=False)
         
-        if "user_input" not in st.session_state:
-            st.session_state.user_input = None
-
-        if "first_two_pages" not in st.session_state:
-            st.session_state.first_two_pages = None      
-                          
         if app_mode == "Legal Decision Summarizer":
             st.title("Legal Decision Summarizer")
             
-            # initialize_session_state()
-            
             choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
             
-            # Initialize variables
-            show_additional_inputs = True
-            user_input = None
-            first_two_pages = None
+            # Initialize session state for processed text
+            if 'processed_text' not in st.session_state:
+                st.session_state.processed_text = None
+                st.session_state.first_two_pages = None
+            
+            show_additional_inputs = False
             
             if choice1 == 'Copy-Paste Text':
                 user_input = st.text_area("Enter legal decision:", height=150)
-                first_two_pages = extract_first_two_pages(user_input)
-                    # st.session_state.user_input = user_input
-                    # st.session_state.first_two_pages = extract_first_two_pages(user_input)
-            
-                # if "file_processed" not in st.session_state:
-                #     st.session_state.file_processed = False
-                #     st.session_state.user_input = None
-                #     st.session_state.first_two_pages = None
+                if user_input:
+                    st.session_state.processed_text = user_input
+                    st.session_state.first_two_pages = extract_first_two_pages(user_input)
+                    show_additional_inputs = True
             
             elif choice1 == 'Upload Document':
                 user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
-
-                if user_file_input is not None:
+                
+                if user_file_input is not None and st.session_state.processed_text is None:
                     # Create progress placeholder
                     progress_placeholder = st.empty()
                     status_placeholder = st.empty()
+                    
                     if user_file_input.name.endswith('.pdf'):
                         status_placeholder.info("Processing PDF... Please wait...")
                         progress_bar = progress_placeholder.progress(10)
-                        # Process PDF
-                        # combined_text = None
                         try:
                             if is_image_based_pdf(user_file_input):
                                 status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
                                 progress_bar.progress(25)
-                                
-                                # Process OCR
                                 combined_text = process_ocr_pdf(user_file_input)
                                 progress_bar.progress(75)
                             else:
                                 progress_bar.progress(25)
                                 combined_text = extract_text_from_pdf(user_file_input)
                                 progress_bar.progress(75)
+                            
+                            if combined_text:
+                                st.session_state.processed_text = combined_text
+                                st.session_state.first_two_pages = extract_first_two_pages(combined_text)
+                                show_additional_inputs = True
+                                progress_bar.progress(100)
+                                status_placeholder.success("Processing complete!")
+                            
                         except Exception as e:
                             st.error(f"Error processing PDF: {str(e)}")
-                            user_input = None
-                            first_two_pages = None
-                            show_additional_inputs = False
-
+                            st.session_state.processed_text = None
+                            st.session_state.first_two_pages = None
+                    
                     elif user_file_input.name.endswith('.docx'):
                         status_placeholder.info("Processing DOCX... Please wait...")
                         progress_bar = progress_placeholder.progress(0)
-                        # combined_text = None
                         try:
                             if is_image_based_docx(user_file_input):
                                 status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
@@ -2026,23 +2019,25 @@ def main():
                                 status_placeholder.info("Extracting text from DOCX...")
                                 progress_bar.progress(50)
                                 combined_text = extract_text_from_docx(user_file_input)
-                                progress_bar.progress(70) 
+                                progress_bar.progress(70)
+                            
+                            if combined_text:
+                                st.session_state.processed_text = combined_text
+                                st.session_state.first_two_pages = extract_first_two_pages(combined_text)
+                                show_additional_inputs = True
+                                progress_bar.progress(100)
+                                status_placeholder.success("Processing complete!")
+                                
                         except Exception as e:
                             st.error(f"Error processing DOCX: {str(e)}")
-                            show_additional_inputs = False
-            
-                    if combined_text:
-                        user_input = combined_text
-                        first_two_pages = extract_first_two_pages(combined_text)
-                    else:
-                        st.error("Failed to extract text from the document.")
-                else:
-                    st.warning("No file uploaded. Please upload a document.")
-                    user_input = None
-                    first_two_pages = None
-                    show_additional_inputs = False
-            # Only show additional inputs if we have valid text and processing is complete
-            if show_additional_inputs:
+                            st.session_state.processed_text = None
+                            st.session_state.first_two_pages = None
+                
+                elif st.session_state.processed_text is not None:
+                    show_additional_inputs = True
+                    
+            # Only show additional inputs if we have valid text
+            if show_additional_inputs and st.session_state.processed_text is not None:
                 if role == "user":
                     try:
                         states = roles_config["usernames"][username]["states"]
@@ -2062,7 +2057,8 @@ def main():
                         page_count = None
                 else:
                     page_count = None
-
+                user_input = st.session_state.processed_text
+                first_two_pages = st.session_state.first_two_pages  
                 if st.button("Summarize"):
                     if state == "New Jersey":
 
