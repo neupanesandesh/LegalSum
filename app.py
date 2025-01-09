@@ -1998,7 +1998,6 @@ def main():
                             st.session_state.uploaded_file_name = user_file_input.name  # Store file name in session state
                             show_additional_inputs = True
                             progress_bar.progress(100)
-                            status_placeholder.success("Processing complete!")
 
                         except Exception as e:
                             st.error(f"Error processing PDF: {str(e)}")
@@ -2028,7 +2027,6 @@ def main():
                             st.session_state.uploaded_file_name = user_file_input.name  # Store file name in session state
                             show_additional_inputs = True
                             progress_bar.progress(100)
-                            status_placeholder.success("Processing complete!")
 
                         except Exception as e:
                             st.error(f"Error processing DOCX: {str(e)}")
@@ -2063,7 +2061,7 @@ def main():
                         page_count = None
                 else:
                     page_count = None
-                if st.button("Summarize"):
+                if st.button("Summarize") is False:
                     if state == "New Jersey":
 
                         # Display the generated summary
