@@ -1973,7 +1973,7 @@ def main():
             elif choice1 == 'Upload Document':
                 user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
                 
-                if user_file_input is not None and st.session_state.processed_text is None:
+                if user_file_input is not None:
                     # Create progress placeholder
                     progress_placeholder = st.empty()
                     status_placeholder = st.empty()
