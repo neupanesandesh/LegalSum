@@ -1962,7 +1962,7 @@ def main():
                 st.session_state.processed_text = None
                 st.session_state.first_two_pages = None
             
-            show_additional_inputs = False
+            show_additional_inputs = True
             
             if choice1 == 'Copy-Paste Text':
                 user_input = st.text_area("Enter legal decision:", height=150)
@@ -2002,6 +2002,7 @@ def main():
                             st.error(f"Error processing PDF: {str(e)}")
                             st.session_state.processed_text = None
                             st.session_state.first_two_pages = None
+                            show_additional_inputs = False
                     
                     elif user_file_input.name.endswith('.docx'):
                         status_placeholder.info("Processing DOCX... Please wait...")
@@ -2029,8 +2030,9 @@ def main():
                             st.error(f"Error processing DOCX: {str(e)}")
                             st.session_state.processed_text = None
                             st.session_state.first_two_pages = None
+                            show_additional_inputs = False
                 
-                elif user_file_input is None and st.session_state.processed_text is None:
+                else: 
                     show_additional_inputs = False
                     
             user_input = st.session_state.processed_text
