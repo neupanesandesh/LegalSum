@@ -2065,6 +2065,7 @@ def main():
                 else:
                     page_count = None
                 if st.button("Summarize"):
+                    show_additional_inputs = False
                     if state == "New Jersey":
 
                         # Display the generated summary
