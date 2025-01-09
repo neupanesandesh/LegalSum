@@ -2308,17 +2308,14 @@ def main():
                         }
                         
                         legal_category = hash_table.get(taxonomy_response.choices[0].message.content, "Unknown code").upper()
-                        progress_bar.progress(100)
                         st.markdown(f"**{legal_category}**")
                         st.write(summary)
                     elif state =="Connecticut":
                         st.subheader("Summary:")
                         st.write(Connecticut_summarizer(user_input))
-                        progress_bar.progress(100)
                     elif state == "Texas":
                         st.subheader("Summary:")
                         st.write(Texas_summarizer(user_input))
-                        progress_bar.progress(100)
                     else:
                         st.warning("Please select a state before clicking 'Summarize'.")
                 
