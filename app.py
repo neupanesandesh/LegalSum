@@ -2099,6 +2099,8 @@ def main():
                     page_count = None
 
                 if st.button("Summarize"):
+                    user_input = st.session_state.processed_text
+                    first_two_pages = st.session_state.first_two_pages
                     if user_input is None:
                         st.error("No text to summarize. Please provide input text or upload a document.")
                     elif state == "New Jersey":
