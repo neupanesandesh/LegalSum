@@ -1974,8 +1974,8 @@ def main():
 
             # Initialize variables
             show_additional_inputs = True
-            user_input = True
-            first_two_pages = True
+            user_input = None
+            first_two_pages = None
 
             if choice1 == 'Copy-Paste Text':
                 user_input = st.text_area("Enter legal decision:", height=150)
@@ -1985,7 +1985,7 @@ def main():
                     st.session_state.processed_text = user_input
                     st.session_state.first_two_pages = first_two_pages
                 else:
-                    show_additional_inputs = False
+                    show_additional_inputs = True
 
             elif choice1 == 'Upload Document':
                 user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
