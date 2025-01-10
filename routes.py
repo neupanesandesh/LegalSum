@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import json
+import re
 from docx import Document
 from openai import OpenAI
 from docx.shared import Pt, RGBColor
@@ -347,32 +348,73 @@ def extract_text_from_image(reader, image_np):
 
 @st.cache_resource
 def load_easyocr():
-    """Initialize EasyOCR reader with caching to prevent reloading"""
+    """Initialize EasyOCR reader with caching"""
     return easyocr.Reader(['en'], gpu=False)
 
 def process_ocr_pdf(pdf_file):
-    """Main function to process PDF and extract text using OCR."""
+    """Optimized function to process PDF and extract text using OCR."""
     try:
-        # Create reader once
         reader = load_easyocr()
-
-        # Reset file pointer to beginning
         pdf_file.seek(0)
-
-        # Extract images
-        images = extract_images_from_pdf(pdf_file)
-        if not images:
-            return None
-            
-        # Extract text from each image
-        texts = []
-        for img in images:
-            text = extract_text_from_image(reader, img)
-            if text:
-                texts.append(text.strip())  # Strip whitespace from each extracted text
-
-        # Combine all texts and strip the final result
-        return " ".join(texts).strip() if texts else None
+        
+        # Open PDF
+        pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")
+        all_text = []
+        
+        # Process first 2 pages with higher quality, rest with lower quality
+        for page_num in range(len(pdf_document)):
+            try:
+                page = pdf_document[page_num]
+                
+                # Higher quality for first two pages, lower for rest
+                if page_num < 2:
+                    matrix = fitz.Matrix(200/72, 200/72)  # Higher resolution for first 2 pages
+                else:
+                    matrix = fitz.Matrix(100/72, 100/72)  # Lower resolution for rest
+                
+                # Get page image
+                pix = page.get_pixmap(matrix=matrix)
+                
+                # Convert to PIL Image
+                img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                
+                # Resize image (more aggressive resizing for later pages)
+                if page_num < 2:
+                    new_width = int(pix.width * 0.75)  # 75% of original for first 2 pages
+                else:
+                    new_width = int(pix.width * 0.5)   # 50% of original for rest
+                new_height = int(pix.height * (new_width / pix.width))
+                img = img.resize((new_width, new_height))
+                
+                # Convert to numpy array
+                img_np = np.array(img)
+                
+                # Extract text
+                results = reader.readtext(img_np)
+                
+                # Extract and clean text
+                page_text = " ".join([entry[1] for entry in results if entry[1].strip()])
+                
+                # Add to collection
+                if page_text.strip():
+                    all_text.append(page_text)
+                
+                # Break after processing significant text
+                if page_num >= 2 and len(" ".join(all_text)) > 1000:
+                    break
+                
+            except Exception as e:
+                print(f"Error processing page {page_num}: {e}")
+                continue
+        
+        # Combine all text
+        final_text = " ".join(all_text).strip()
+        
+        # Basic text cleaning
+        final_text = re.sub(r'\s+', ' ', final_text)  # Remove multiple spaces
+        final_text = re.sub(r'[^\x00-\x7F]+', '', final_text)  # Remove non-ASCII characters
+        
+        return final_text if final_text else None
 
     except Exception as e:
         print(f"Failed to process the file: {e}")
