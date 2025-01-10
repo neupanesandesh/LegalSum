@@ -1993,18 +1993,14 @@ def main():
                 if user_file_input is not None:
                     file_hash = hash(user_file_input.getvalue())
                     
-                    # Check if the uploaded file is different from the last processed file
-                    if st.session_state.get('last_file_hash') != file_hash:
-                        # Reset session state variables for new file
-                        st.session_state.file_processed = False
+                    # Only process if file is new or changed
+                    if not st.session_state.file_processed or st.session_state.last_file_hash != file_hash:
                         st.session_state.last_file_hash = file_hash
-                        st.session_state.processed_text = None
-                        st.session_state.first_two_pages = None
-
-                        # Create progress placeholders
+                        
+                        # Create progress placeholder
                         progress_placeholder = st.empty()
                         status_placeholder = st.empty()
-
+                        
                         with st.container():
                             if user_file_input.name.endswith('.pdf'):
                                 status_placeholder.info("Processing PDF... Please wait...")
@@ -2022,12 +2018,19 @@ def main():
                                         status_placeholder.info("Extracting text from PDF...")
 
                                     if extracted_text:
+                                        # Store in session state and variables
                                         st.session_state.processed_text = extracted_text
                                         st.session_state.first_two_pages = extract_first_two_pages(extracted_text)
+                                        user_input = extracted_text
+                                        first_two_pages = st.session_state.first_two_pages
+                                        st.session_state.file_processed = True
                                     else:
                                         st.error("Text extraction failed.")
+                                        show_additional_inputs = False
+
                                 except Exception as e:
                                     st.error(f"Error processing PDF: {str(e)}")
+                                    show_additional_inputs = False
 
                             elif user_file_input.name.endswith('.docx'):
                                 status_placeholder.info("Processing DOCX... Please wait...")
@@ -2044,23 +2047,33 @@ def main():
                                         status_placeholder.info("Extracting text from DOCX...")
                                         progress_bar.progress(50)
                                         extracted_text = extract_text_from_docx(user_file_input)
+                                        progress_bar.progress(70)
 
                                     if extracted_text:
+                                        # Store in session state and variables
                                         st.session_state.processed_text = extracted_text
                                         st.session_state.first_two_pages = extract_first_two_pages(extracted_text)
+                                        user_input = extracted_text
+                                        first_two_pages = st.session_state.first_two_pages
+                                        st.session_state.file_processed = True
                                     else:
                                         st.error("Could not extract text from the DOCX file.")
+                                        show_additional_inputs = False
+
                                 except Exception as e:
                                     st.error(f"Error processing DOCX: {str(e)}")
+                                    show_additional_inputs = False
 
-                            # Clear progress indicators
+                            # Clear progress indicators after processing
                             progress_placeholder.empty()
                             status_placeholder.empty()
-
+                    
                     else:
-                        st.warning("The uploaded file is identical to the last processed file.")
+                        st.warning("No file uploaded. Please upload a document.")
+
                 else:
                     st.warning("No file uploaded. Please upload a document.")
+                    show_additional_inputs = False
 
             # Only show additional inputs if we have valid text
             if show_additional_inputs and user_input is not None:
