@@ -1960,10 +1960,7 @@ def main():
         if app_mode == "Legal Decision Summarizer":
             st.title("Legal Decision Summarizer")
 
-            # Initialize session state for file processing
-            if 'file_processed' not in st.session_state:
-                st.session_state.file_processed = False
-                st.session_state.last_file_hash = None
+            # initialize_session_state()
 
             choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
 
@@ -1974,100 +1971,101 @@ def main():
 
             if choice1 == 'Copy-Paste Text':
                 user_input = st.text_area("Enter legal decision:", height=150)
-                if user_input:
-                    first_two_pages = extract_first_two_pages(user_input)
-                else:
-                    show_additional_inputs = False
+                first_two_pages = extract_first_two_pages(user_input)
+                    # st.session_state.extracted_text = user_input
+                    # st.session_state.processing_complete = True
 
             elif choice1 == 'Upload Document':
                 user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
 
                 if user_file_input is not None:
-                    file_hash = hash(user_file_input.getvalue())
-                    
-                    # Only process if file is new or changed
-                    if not st.session_state.file_processed or st.session_state.last_file_hash != file_hash:
-                        st.session_state.last_file_hash = file_hash
-                        
-                        # Create progress placeholder
-                        progress_placeholder = st.empty()
-                        status_placeholder = st.empty()
-                        
-                        with st.container():
-                            if user_file_input.name.endswith('.pdf'):
-                                status_placeholder.info("Processing PDF... Please wait...")
-                                progress_bar = progress_placeholder.progress(0)
+                    # Create progress placeholder
+                    progress_placeholder = st.empty()
+                    status_placeholder = st.empty()
+                    with st.container():
+                        if user_file_input.name.endswith('.pdf'):
+                            status_placeholder.info("Processing PDF... Please wait...")
+                            progress_bar = progress_placeholder.progress(0)
 
-                                try:
-                                    if is_image_based_pdf(user_file_input):
-                                        status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
-                                        progress_bar.progress(25)
-                                        user_input = process_ocr_pdf(user_file_input)
-                                        progress_bar.progress(75)
-                                    else:
-                                        user_input = extract_text_from_pdf(user_file_input)
-                                        progress_bar.progress(50)
-                                        status_placeholder.info("Extracting text from PDF...")
+                            # Process PDF
+                            # combined_text = None
+                            try:
+                                if is_image_based_pdf(user_file_input):
+                                    status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
+                                    progress_bar.progress(25)
 
-                                    if user_input:
-                                        first_two_pages = extract_first_two_pages(user_input)
-                                        st.session_state.file_processed = True
+                                    # Process OCR
+                                    combined_text = process_ocr_pdf(user_file_input)
+                                    progress_bar.progress(75)
+
+                                    if combined_text:
+                                        user_input = combined_text
+                                        first_two_pages = extract_first_two_pages(combined_text)
                                     else:
-                                        st.error("Text extraction failed.")
+                                        st.error("OCR extraction failed. The PDF might contain unclear images.")
+                                        user_input = None
+                                        first_two_pages = None
                                         show_additional_inputs = False
+                                else:
+                                    combined_text = extract_text_from_pdf(user_file_input)
+                                    progress_bar.progress(50)
+                                    status_placeholder.info("Extracting text from PDF...")
+                                    if combined_text:
+                                        user_input = combined_text 
+                                        first_two_pages = extract_first_two_pages(combined_text)
+                                    # progress_bar.progress(90)
+                            except Exception as e:
+                                st.error(f"Error processing PDF: {str(e)}")
+                                user_input = None
+                                first_two_pages = None
+                                show_additional_inputs = False
 
-                                except Exception as e:
-                                    st.error(f"Error processing PDF: {str(e)}")
-                                    user_input = None
-                                    first_two_pages = None
-                                    show_additional_inputs = False
+                        elif user_file_input.name.endswith('.docx'):
+                            status_placeholder.info("Processing DOCX... Please wait...")
+                            progress_bar = progress_placeholder.progress(0)
+                            # combined_text = None
+                            try:
+                                if is_image_based_docx(user_file_input):
+                                    status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
+                                    progress_bar.progress(25)
+                                    pdf_file = convert_docx_to_pdf(user_file_input)
+                                    combined_text = process_ocr_pdf(pdf_file)
+                                    progress_bar.progress(75)
 
-                            elif user_file_input.name.endswith('.docx'):
-                                status_placeholder.info("Processing DOCX... Please wait...")
-                                progress_bar = progress_placeholder.progress(0)
-
-                                try:
-                                    if is_image_based_docx(user_file_input):
-                                        status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
-                                        progress_bar.progress(25)
-                                        pdf_file = convert_docx_to_pdf(user_file_input)
-                                        user_input = process_ocr_pdf(pdf_file)
-                                        progress_bar.progress(75)
+                                    if combined_text:
+                                        user_input = combined_text
+                                        first_two_pages = extract_first_two_pages(combined_text)
                                     else:
-                                        status_placeholder.info("Extracting text from DOCX...")
-                                        progress_bar.progress(50)
-                                        user_input = extract_text_from_docx(user_file_input)
-                                        progress_bar.progress(70)
-
-                                    if user_input:
-                                        first_two_pages = extract_first_two_pages(user_input)
-                                        st.session_state.file_processed = True
+                                        st.error("OCR extraction failed. The DOCX might contain unclear images.")
+                                        user_input = None
+                                        first_two_pages = None
+                                        show_additional_inputs = False     
+                                # combined_text = extract_text_from_docx(user_file_input)
+                                # progress_bar.progress(90)
+                                else:
+                                    status_placeholder.info("Extracting text from DOCX...")
+                                    progress_bar.progress(50)
+                                    combined_text = extract_text_from_docx(user_file_input)
+                                    progress_bar.progress(70)
+                                    if combined_text:
+                                        user_input = combined_text
+                                        first_two_pages = extract_first_two_pages(combined_text)
                                     else:
                                         st.error("Could not extract text from the DOCX file.")
-                                        show_additional_inputs = False
-
-                                except Exception as e:
-                                    st.error(f"Error processing DOCX: {str(e)}")
-                                    user_input = None
-                                    first_two_pages = None
-                                    show_additional_inputs = False
-
-                            # Clear progress indicators after processing
-                            progress_placeholder.empty()
-                            status_placeholder.empty()
-                    
-                    else:
-                        # Use cached results from session state
-                        user_input = st.session_state.get('user_input')
-                        first_two_pages = st.session_state.get('first_two_pages')
+                                        user_input = None
+                                        first_two_pages = None
+                                        show_additional_inputs = False    
+                            except Exception as e:
+                                st.error(f"Error processing DOCX: {str(e)}")
+                                show_additional_inputs = False
                 else:
                     st.warning("No file uploaded. Please upload a document.")
                     user_input = None
                     first_two_pages = None
                     show_additional_inputs = False
 
-            # Only show additional inputs if we have valid text
-            if show_additional_inputs and user_input:
+            # Only show additional inputs if we have valid text and processing is complete
+            if show_additional_inputs:
                 if role == "user":
                     try:
                         states = roles_config["usernames"][username]["states"]
@@ -2090,258 +2088,257 @@ def main():
 
             if st.button("Summarize"):
                 if state == "New Jersey":
-                        if state == "New Jersey":
 
-                            # Display the generated summary
-                            summary = text_summarizer_alternate(user_input) 
+                    # Display the generated summary
+                    summary = text_summarizer_alternate(user_input) 
+                
+                    
+                    print(summary)
+                    
+                    summary = summary.replace("District Court", "district court")
+                    st.subheader("Summary:")
+
+                    # Type of case federal or State
+                    federal_response = client.chat.completions.create(
+                        model=GPTModel,
+                        temperature=0.2,
+                        max_tokens=16,
+                        messages=[
+                            {"role": "system", "content": """
+                            
+                            Determine if the legal case, if related to a state or federal case, the federal cases are these 
+                            Bankr. D.N.J. (U.S Bankruptcy Court) 6
+                            D.N.J. (U.S. District Court) - 7
+                            3d Cir. (Third Circuit) – 8
+                            
+                            If that's a federal case just return Federal, nothing else, if it's a state just retrun State nothing else.
+                            """},
+                            {"role": "user", "content": user_input}
+                        ]
+                    )
+
+                    # Append the court date to the summary
+                    court_type = federal_response.choices[0].message.content.strip()
+
+
+                    # Extract the court date
+                    date_response = client.chat.completions.create(
+                        model=GPTModel,
+                        temperature=0.2,
+                        max_tokens=16,
+                        messages=[
+                            {"role": "system", "content": "Check filed date, usually it is at the top of the document, American date format, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
+                            {"role": "user", "content": user_input}
+                        ]
+                    )
+
+                    # Append the court date to the summary
+                    court_date = date_response.choices[0].message.content.strip()
+                    
+                    if court_type =="Federal":
+                        summary = summary + " [Filed " + court_date + "]"
+                    
+                    # judge
+                    prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam. If it 's a federal case and district case, replace the first name by : U.S.D.J. Else if it 's a federal case and magistrate case, replace the first name by : U.S.M.J."
+
+                    judge_response = client.chat.completions.create(
+                    model = GPTModel,
+                    temperature = 0.0,
+                    max_tokens = 600,
+                    messages = [
+                        {"role": "system", "content": prompt_judge},
+                        {"role": "user", "content": user_input}
+                        ]
+                    )
+                    
+                    judge_name ="" 
+                    
+                    if judge_response.choices[0].message.content =="per curiam" :
+                        judge_name = "per curiam"
+                    elif "U.S.D.J." in judge_response.choices[0].message.content:
+                        name = HumanName(judge_response.choices[0].message.content)
+                        judge_name = name.last + ", U.S.D.J."
                         
-                            
-                            print(summary)
-                            
-                            summary = summary.replace("District Court", "district court")
-                            st.subheader("Summary:")
-
-                            # Type of case federal or State
-                            federal_response = client.chat.completions.create(
-                                model=GPTModel,
-                                temperature=0.2,
-                                max_tokens=16,
-                                messages=[
-                                    {"role": "system", "content": """
-                                    
-                                    Determine if the legal case, if related to a state or federal case, the federal cases are these 
-                                    Bankr. D.N.J. (U.S Bankruptcy Court) 6
-                                    D.N.J. (U.S. District Court) - 7
-                                    3d Cir. (Third Circuit) – 8
-                                    
-                                    If that's a federal case just return Federal, nothing else, if it's a state just retrun State nothing else.
-                                    """},
-                                    {"role": "user", "content": user_input}
-                                ]
-                            )
-
-                            # Append the court date to the summary
-                            court_type = federal_response.choices[0].message.content.strip()
-
-
-                            # Extract the court date
-                            date_response = client.chat.completions.create(
-                                model=GPTModel,
-                                temperature=0.2,
-                                max_tokens=16,
-                                messages=[
-                                    {"role": "system", "content": "Check filed date, usually it is at the top of the document, American date format, also answer with the date only, nothing else, no additional text, just the date, and abreviate the month like this Jan. Feb. March April May June July Aug. Sept. Oct. Nov. Dec."},
-                                    {"role": "user", "content": user_input}
-                                ]
-                            )
-
-                            # Append the court date to the summary
-                            court_date = date_response.choices[0].message.content.strip()
-                            
-                            if court_type =="Federal":
-                                summary = summary + " [Filed " + court_date + "]"
-                            
-                            # judge
-                            prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam. If it 's a federal case and district case, replace the first name by : U.S.D.J. Else if it 's a federal case and magistrate case, replace the first name by : U.S.M.J."
-
-                            judge_response = client.chat.completions.create(
-                            model = GPTModel,
-                            temperature = 0.0,
-                            max_tokens = 600,
-                            messages = [
-                                {"role": "system", "content": prompt_judge},
-                                {"role": "user", "content": user_input}
-                                ]
-                            )
-                            
-                            judge_name ="" 
-                            
-                            if judge_response.choices[0].message.content =="per curiam" :
-                                judge_name = "per curiam"
-                            elif "U.S.D.J." in judge_response.choices[0].message.content:
-                                name = HumanName(judge_response.choices[0].message.content)
-                                judge_name = name.last + ", U.S.D.J."
-                                
-                            elif "U.S.M.J." in judge_response.choices[0].message.content:
-                                name = HumanName(judge_response.choices[0].message.content)
-                                judge_name = name.last + ", U.S.M.J."
-                                
-                            else:
-                                name = HumanName(judge_response.choices[0].message.content)
-                                judge_name = name.last + ", J."  #.capitalize()
-                            
-                            summary = " (" + judge_name + ") (" + str(page_count) + " pp.) "  + summary 
-                            print (judge_response.choices[0].message.content)
-                            
-                            # court option
-                            
-                            courts = {
-                                    'N.J.': 1,
-                                    'N.J. Super. App. Div.': 2,
-                                    'N.J. Super. Law Div.': 3,
-                                    'N.J. Super. Ch. Div.': 4,
-                                    'Tax Ct.': 5,
-                                    'Bankr. D.N.J.': 6,
-                                    'D.N.J.': 7,
-                                    '3d Cir.': 8
-                                    }
-                            courts_inverted = {value: key for key, value in courts.items()}
-
-                            
-                            prompt_court_option = ('I will send you a legal decision and you have to select one of these court option, just return the corresponding number, nothing else, here are the court option :' 
-                                'N.J. Sup. Ct. (Supreme Court) - 1 '
-                                'N.J. Super. App. Div. (Appellate Division) 2 '
-                                'N.J. Super. Law Div. – (Law Division) (Civil and Criminal) 3 '
-                                'N.J. Super. Ch. Div. (Chancery Division) (General Equity and Family) -4 '
-                                'Tax Ct. – (Tax Court) - 5 '
-                                'Bankr. D.N.J. (U.S Bankruptcy Court 6 '
-                                'D.N.J. (U.S. District Court) - 7 '
-                                '3d Cir. (Third Circuit) - 8 ')
-                            
-                            court_response = client.chat.completions.create(
-                            model = GPTModel,
-                            temperature = 0.2,
-                            max_tokens = 600,
-                            messages = [
-                                {"role": "system", "content": prompt_court_option},
-                                {"role": "user", "content": first_two_pages}
-                                ]
-                            )
-                            print (court_response.choices[0].message.content)
-                            summary = courts_inverted[int(court_response.choices[0].message.content)] + " "  + summary
-                            
-                            title_case = (f"*{title(first_two_pages)}*")
-                            
-                            
-                            summary = title_case + ", "  + summary 
-                            
-                            # taxonomy
-                            prompt_taxonomy = """ I will give you a table with taxonomy , read the legal case, just return the corresponding number , nothing else. here is the table :
-                                NJ topic #	NJ Taxonomy Topics
-                                01	Administrative Law
-                                54	Admiralty
-                                59	Antitrust
-                                06	Banking and Finance Laws
-                                42	Bankruptcy
-                                07	Civil Procedure
-                                46	Civil Rights
-                                08	Commercial Law
-                                10	Constitutional Law
-                                09	Consumer Protection
-                                11	Contracts; Contractual Disputes
-                                12	Corporate Entities; Corporate Governance
-                                15	Creditors' and Debtors' Rights
-                                14	Criminal Law
-                                31	Damages; Personal Injury
-                                03	Dispute Resolution
-                                16	Education Law
-                                60	Elder Law
-                                39	Employment Benefits; Employment Litigation
-                                55	Entertainment and Sports Law
-                                17	Environmental Law
-                                19	Evidence
-                                20	Family Law
-                                21	Government
-                                22	Health Care Law
-                                51	Immigration Law
-                                23	Insurance Law
-                                53	Intellectual Property
-                                61	Internet Law
-                                48	Judges
-                                04	Judges; Legal Ethics and Attorney Discipline; Legal Malpractice
-                                56	Labor Law; Employment Benefits
-                                25	Labor Law; Employment Compliance; Employment Litigation
-                                26	Land Use and Planning
-                                27	Landlord/Tenant
-                                36	Mass Tort Claims; Motor Vehicle Torts; Toxic Torts; Business Torts; Damages
-                                29	Medical Malpractice
-                                05	Motor Vehicle Torts
-                                32	Products Liability
-                                52	Public Records
-                                37	Public Utilities
-                                34	Real Estate
-                                50	Securities
-                                35	Tax
-                                57	Telecommunications
-                                49	Transportation
-                                38	Trusts and Estates
-                                40	Wrongful Death
-                                """
-
-                            taxonomy_response = client.chat.completions.create(
-                            model = GPTModel,
-                            temperature = 0.2,
-                            max_tokens = 600,
-                            messages = [
-                                {"role": "system", "content": prompt_taxonomy},
-                                {"role": "user", "content": user_input}
-                                ]
-                            )
-                            print (taxonomy_response.choices[0].message.content)
-                            summary = taxonomy_response.choices[0].message.content + "-" + court_response.choices[0].message.content + "-XXXX " + summary
-                            
-                            hash_table = {
-                                "01": "Administrative Law",
-                                "54": "Admiralty",
-                                "59": "Antitrust",
-                                "06": "Banking and Finance Laws",
-                                "42": "Bankruptcy",
-                                "07": "Civil Procedure",
-                                "46": "Civil Rights",
-                                "08": "Commercial Law",
-                                "10": "Constitutional Law",
-                                "09": "Consumer Protection",
-                                "11": "Contracts; Contractual Disputes",
-                                "12": "Corporate Entities; Corporate Governance",
-                                "15": "Creditors' and Debtors' Rights",
-                                "14": "Criminal Law",
-                                "31": "Damages; Personal Injury",
-                                "03": "Dispute Resolution",
-                                "16": "Education Law",
-                                "60": "Elder Law",
-                                "39": "Employment Benefits; Employment Litigation",
-                                "55": "Entertainment and Sports Law",
-                                "17": "Environmental Law",
-                                "19": "Evidence",
-                                "20": "Family Law",
-                                "21": "Government",
-                                "22": "Health Care Law",
-                                "51": "Immigration Law",
-                                "23": "Insurance Law",
-                                "53": "Intellectual Property",
-                                "61": "Internet Law",
-                                "48": "Judges",
-                                "04": "Judges; Legal Ethics and Attorney Discipline; Legal Malpractice",
-                                "56": "Labor Law; Employment Benefits",
-                                "25": "Labor Law; Employment Compliance; Employment Litigation",
-                                "26": "Land Use and Planning",
-                                "27": "Landlord/Tenant",
-                                "36": "Mass Tort Claims; Motor Vehicle Torts; Toxic Torts; Business Torts; Damages",
-                                "29": "Medical Malpractice",
-                                "05": "Motor Vehicle Torts",
-                                "32": "Products Liability",
-                                "52": "Public Records",
-                                "37": "Public Utilities",
-                                "34": "Real Estate",
-                                "50": "Securities",
-                                "35": "Tax",
-                                "57": "Telecommunications",
-                                "49": "Transportation",
-                                "38": "Trusts and Estates",
-                                "40": "Wrongful Death"
+                    elif "U.S.M.J." in judge_response.choices[0].message.content:
+                        name = HumanName(judge_response.choices[0].message.content)
+                        judge_name = name.last + ", U.S.M.J."
+                        
+                    else:
+                        name = HumanName(judge_response.choices[0].message.content)
+                        judge_name = name.last + ", J."  #.capitalize()
+                    
+                    summary = " (" + judge_name + ") (" + str(page_count) + " pp.) "  + summary 
+                    print (judge_response.choices[0].message.content)
+                    
+                    # court option
+                    
+                    courts = {
+                            'N.J.': 1,
+                            'N.J. Super. App. Div.': 2,
+                            'N.J. Super. Law Div.': 3,
+                            'N.J. Super. Ch. Div.': 4,
+                            'Tax Ct.': 5,
+                            'Bankr. D.N.J.': 6,
+                            'D.N.J.': 7,
+                            '3d Cir.': 8
                             }
-                            
-                            legal_category = hash_table.get(taxonomy_response.choices[0].message.content, "Unknown code").upper()
-                            st.markdown(f"**{legal_category}**")
-                            st.write(summary)
-                        elif state =="Connecticut":
-                            st.subheader("Summary:")
-                            st.write(Connecticut_summarizer(user_input))
-                        elif state == "Texas":
-                            st.subheader("Summary:")
-                            st.write(Texas_summarizer(user_input))
-                        else:
-                            st.warning("Please select a state before clicking 'Summarize'.")
+                    courts_inverted = {value: key for key, value in courts.items()}
+
+                    
+                    prompt_court_option = ('I will send you a legal decision and you have to select one of these court option, just return the corresponding number, nothing else, here are the court option :' 
+                        'N.J. Sup. Ct. (Supreme Court) - 1 '
+                        'N.J. Super. App. Div. (Appellate Division) 2 '
+                        'N.J. Super. Law Div. – (Law Division) (Civil and Criminal) 3 '
+                        'N.J. Super. Ch. Div. (Chancery Division) (General Equity and Family) -4 '
+                        'Tax Ct. – (Tax Court) - 5 '
+                        'Bankr. D.N.J. (U.S Bankruptcy Court 6 '
+                        'D.N.J. (U.S. District Court) - 7 '
+                        '3d Cir. (Third Circuit) - 8 ')
+                    
+                    court_response = client.chat.completions.create(
+                    model = GPTModel,
+                    temperature = 0.2,
+                    max_tokens = 600,
+                    messages = [
+                        {"role": "system", "content": prompt_court_option},
+                        {"role": "user", "content": first_two_pages}
+                        ]
+                    )
+                    print (court_response.choices[0].message.content)
+                    summary = courts_inverted[int(court_response.choices[0].message.content)] + " "  + summary
+                    
+                    title_case = (f"*{title(first_two_pages)}*")
+                    
+                    
+                    summary = title_case + ", "  + summary 
+                    
+                    # taxonomy
+                    prompt_taxonomy = """ I will give you a table with taxonomy , read the legal case, just return the corresponding number , nothing else. here is the table :
+                        NJ topic #	NJ Taxonomy Topics
+                        01	Administrative Law
+                        54	Admiralty
+                        59	Antitrust
+                        06	Banking and Finance Laws
+                        42	Bankruptcy
+                        07	Civil Procedure
+                        46	Civil Rights
+                        08	Commercial Law
+                        10	Constitutional Law
+                        09	Consumer Protection
+                        11	Contracts; Contractual Disputes
+                        12	Corporate Entities; Corporate Governance
+                        15	Creditors' and Debtors' Rights
+                        14	Criminal Law
+                        31	Damages; Personal Injury
+                        03	Dispute Resolution
+                        16	Education Law
+                        60	Elder Law
+                        39	Employment Benefits; Employment Litigation
+                        55	Entertainment and Sports Law
+                        17	Environmental Law
+                        19	Evidence
+                        20	Family Law
+                        21	Government
+                        22	Health Care Law
+                        51	Immigration Law
+                        23	Insurance Law
+                        53	Intellectual Property
+                        61	Internet Law
+                        48	Judges
+                        04	Judges; Legal Ethics and Attorney Discipline; Legal Malpractice
+                        56	Labor Law; Employment Benefits
+                        25	Labor Law; Employment Compliance; Employment Litigation
+                        26	Land Use and Planning
+                        27	Landlord/Tenant
+                        36	Mass Tort Claims; Motor Vehicle Torts; Toxic Torts; Business Torts; Damages
+                        29	Medical Malpractice
+                        05	Motor Vehicle Torts
+                        32	Products Liability
+                        52	Public Records
+                        37	Public Utilities
+                        34	Real Estate
+                        50	Securities
+                        35	Tax
+                        57	Telecommunications
+                        49	Transportation
+                        38	Trusts and Estates
+                        40	Wrongful Death
+                        """
+
+                    taxonomy_response = client.chat.completions.create(
+                    model = GPTModel,
+                    temperature = 0.2,
+                    max_tokens = 600,
+                    messages = [
+                        {"role": "system", "content": prompt_taxonomy},
+                        {"role": "user", "content": user_input}
+                        ]
+                    )
+                    print (taxonomy_response.choices[0].message.content)
+                    summary = taxonomy_response.choices[0].message.content + "-" + court_response.choices[0].message.content + "-XXXX " + summary
+                    
+                    hash_table = {
+                        "01": "Administrative Law",
+                        "54": "Admiralty",
+                        "59": "Antitrust",
+                        "06": "Banking and Finance Laws",
+                        "42": "Bankruptcy",
+                        "07": "Civil Procedure",
+                        "46": "Civil Rights",
+                        "08": "Commercial Law",
+                        "10": "Constitutional Law",
+                        "09": "Consumer Protection",
+                        "11": "Contracts; Contractual Disputes",
+                        "12": "Corporate Entities; Corporate Governance",
+                        "15": "Creditors' and Debtors' Rights",
+                        "14": "Criminal Law",
+                        "31": "Damages; Personal Injury",
+                        "03": "Dispute Resolution",
+                        "16": "Education Law",
+                        "60": "Elder Law",
+                        "39": "Employment Benefits; Employment Litigation",
+                        "55": "Entertainment and Sports Law",
+                        "17": "Environmental Law",
+                        "19": "Evidence",
+                        "20": "Family Law",
+                        "21": "Government",
+                        "22": "Health Care Law",
+                        "51": "Immigration Law",
+                        "23": "Insurance Law",
+                        "53": "Intellectual Property",
+                        "61": "Internet Law",
+                        "48": "Judges",
+                        "04": "Judges; Legal Ethics and Attorney Discipline; Legal Malpractice",
+                        "56": "Labor Law; Employment Benefits",
+                        "25": "Labor Law; Employment Compliance; Employment Litigation",
+                        "26": "Land Use and Planning",
+                        "27": "Landlord/Tenant",
+                        "36": "Mass Tort Claims; Motor Vehicle Torts; Toxic Torts; Business Torts; Damages",
+                        "29": "Medical Malpractice",
+                        "05": "Motor Vehicle Torts",
+                        "32": "Products Liability",
+                        "52": "Public Records",
+                        "37": "Public Utilities",
+                        "34": "Real Estate",
+                        "50": "Securities",
+                        "35": "Tax",
+                        "57": "Telecommunications",
+                        "49": "Transportation",
+                        "38": "Trusts and Estates",
+                        "40": "Wrongful Death"
+                    }
+                    
+                    legal_category = hash_table.get(taxonomy_response.choices[0].message.content, "Unknown code").upper()
+                    st.markdown(f"**{legal_category}**")
+                    st.write(summary)
+                elif state =="Connecticut":
+                    st.subheader("Summary:")
+                    st.write(Connecticut_summarizer(user_input))
+                elif state == "Texas":
+                    st.subheader("Summary:")
+                    st.write(Texas_summarizer(user_input))
+                else:
+                    st.warning("Please select a state before clicking 'Summarize'.")
                 
         elif app_mode == "Newsletter Quotes":
 
