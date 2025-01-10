@@ -1974,8 +1974,8 @@ def main():
 
             # Initialize variables
             show_additional_inputs = True
-            user_input = None
-            first_two_pages = None
+            user_input = True
+            first_two_pages = True
 
             if choice1 == 'Copy-Paste Text':
                 user_input = st.text_area("Enter legal decision:", height=150)
@@ -2086,7 +2086,7 @@ def main():
             if show_additional_inputs and user_input is not None:
                 if role == "user":
                     try:
-                        states = roles_config["usernames"][username]["states"]
+                        states =["New Jersey", "Texas", "Connecticut"]
                     except:
                         states = []
                 else:
