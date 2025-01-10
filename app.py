@@ -1992,15 +1992,20 @@ def main():
 
                 if user_file_input is not None:
                     file_hash = hash(user_file_input.getvalue())
-                    
+
                     # Only process if file is new or changed
                     if not st.session_state.file_processed or st.session_state.last_file_hash != file_hash:
+                        # Reset session state variables for new file
+                        st.session_state.file_processed = False
+                        st.session_state.processed_text = None
+                        st.session_state.first_two_pages = None
+
                         st.session_state.last_file_hash = file_hash
-                        
+
                         # Create progress placeholder
                         progress_placeholder = st.empty()
                         status_placeholder = st.empty()
-                        
+
                         with st.container():
                             if user_file_input.name.endswith('.pdf'):
                                 status_placeholder.info("Processing PDF... Please wait...")
@@ -2067,13 +2072,15 @@ def main():
                             # Clear progress indicators after processing
                             progress_placeholder.empty()
                             status_placeholder.empty()
-                    
-                    else:
-                        st.warning("No file uploaded. Please upload a document.")
 
+                    else:
+                        # Use cached results from session state
+                        user_input = st.session_state.processed_text
+                        first_two_pages = st.session_state.first_two_pages
                 else:
                     st.warning("No file uploaded. Please upload a document.")
                     show_additional_inputs = False
+
 
             # Only show additional inputs if we have valid text
             if show_additional_inputs and user_input is not None:
@@ -2098,6 +2105,8 @@ def main():
                     page_count = None
 
                 if st.button("Summarize"):
+                    user_input = st.session_state.processed_text
+                    first_two_pages = st.session_state.first_two_pages
                     if user_input is None:
                         st.error("No text to summarize. Please provide input text or upload a document.")
                     elif state == "New Jersey":
