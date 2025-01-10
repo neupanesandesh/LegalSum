@@ -2066,8 +2066,8 @@ def main():
                     first_two_pages = None
                     show_additional_inputs = False
 
-            # Only show additional inputs if we have valid text
-            if show_additional_inputs and user_input:
+            # Only show additional inputs if we have valid text and processing is complete
+            if show_additional_inputs:
                 if role == "user":
                     try:
                         states = roles_config["usernames"][username]["states"]
