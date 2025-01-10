@@ -1960,7 +1960,7 @@ def main():
         if app_mode == "Legal Decision Summarizer":
             st.title("Legal Decision Summarizer")
 
-            initialize_session_state()
+            # initialize_session_state()
 
             choice1 = st.radio("How would you like to provide the legal decision?", ('Copy-Paste Text', 'Upload Document'))
 
@@ -1968,12 +1968,12 @@ def main():
             show_additional_inputs = True
             user_input = None
             first_two_pages = None
+    
             if choice1 == 'Copy-Paste Text':
                 user_input = st.text_area("Enter legal decision:", height=150)
-                if user_input:
-                    first_two_pages = extract_first_two_pages(user_input)
-                    st.session_state.extracted_text = user_input
-                    st.session_state.processing_complete = True
+                first_two_pages = extract_first_two_pages(user_input)
+                    # st.session_state.extracted_text = user_input
+                    # st.session_state.processing_complete = True
 
             elif choice1 == 'Upload Document':
                 user_file_input = st.file_uploader("Upload your document", type=["pdf", "docx"])
@@ -1982,90 +1982,90 @@ def main():
                     # Create progress placeholder
                     progress_placeholder = st.empty()
                     status_placeholder = st.empty()
-                    if not st.session_state.processing_complete:
+                    with st.container():
                         if user_file_input.name.endswith('.pdf'):
                             status_placeholder.info("Processing PDF... Please wait...")
                             progress_bar = progress_placeholder.progress(0)
 
                             # Process PDF
-                            combined_text = None
+                            # combined_text = None
                             try:
                                 if is_image_based_pdf(user_file_input):
                                     status_placeholder.warning("PDF is image-based. Running OCR... This may take a few minutes...")
                                     progress_bar.progress(25)
 
                                     # Process OCR
-                                    extracted_text = process_ocr_pdf(user_file_input)
+                                    combined_text = process_ocr_pdf(user_file_input)
                                     progress_bar.progress(75)
 
-                                    if extracted_text and any(extracted_text):
-                                        combined_text = " ".join(extracted_text)
+                                    if combined_text:
+                                        user_input = combined_text
+                                        first_two_pages = extract_first_two_pages(combined_text)
                                     else:
                                         st.error("OCR extraction failed. The PDF might contain unclear images.")
+                                        user_input = None
+                                        first_two_pages = None
                                         show_additional_inputs = False
                                 else:
-                                    status_placeholder.info("Extracting text from PDF...")
-                                    progress_bar.progress(50)
                                     combined_text = extract_text_from_pdf(user_file_input)
-                                    progress_bar.progress(90)
+                                    progress_bar.progress(50)
+                                    status_placeholder.info("Extracting text from PDF...")
+                                    if combined_text:
+                                        user_input = combined_text 
+                                        first_two_pages = extract_first_two_pages(combined_text)
+                                    # progress_bar.progress(90)
                             except Exception as e:
                                 st.error(f"Error processing PDF: {str(e)}")
+                                user_input = None
+                                first_two_pages = None
                                 show_additional_inputs = False
 
                         elif user_file_input.name.endswith('.docx'):
                             status_placeholder.info("Processing DOCX... Please wait...")
                             progress_bar = progress_placeholder.progress(0)
-                            combined_text = None
+                            # combined_text = None
                             try:
                                 if is_image_based_docx(user_file_input):
                                     status_placeholder.warning("DOCX is image-based. Running OCR... This may take a few minutes...")
                                     progress_bar.progress(25)
                                     pdf_file = convert_docx_to_pdf(user_file_input)
-                                    extracted_text = process_ocr_pdf(pdf_file)
+                                    combined_text = process_ocr_pdf(pdf_file)
                                     progress_bar.progress(75)
 
-                                    if extracted_text and any(extracted_text):
-                                        combined_text = " ".join(extracted_text)
+                                    if combined_text:
+                                        user_input = combined_text
+                                        first_two_pages = extract_first_two_pages(combined_text)
                                     else:
                                         st.error("OCR extraction failed. The DOCX might contain unclear images.")
-                                        show_additional_inputs = False
-                                            
+                                        user_input = None
+                                        first_two_pages = None
+                                        show_additional_inputs = False     
                                 # combined_text = extract_text_from_docx(user_file_input)
                                 # progress_bar.progress(90)
                                 else:
                                     status_placeholder.info("Extracting text from DOCX...")
                                     progress_bar.progress(50)
                                     combined_text = extract_text_from_docx(user_file_input)
-                                    progress_bar.progress(90)
+                                    progress_bar.progress(70)
+                                    if combined_text:
+                                        user_input = combined_text
+                                        first_two_pages = extract_first_two_pages(combined_text)
+                                    else:
+                                        st.error("Could not extract text from the DOCX file.")
+                                        user_input = None
+                                        first_two_pages = None
+                                        show_additional_inputs = False    
                             except Exception as e:
                                 st.error(f"Error processing DOCX: {str(e)}")
                                 show_additional_inputs = False
-                        # Process the extracted text
-                        if combined_text:
-                            if len(combined_text.strip()) < 200:
-                                st.error(f"Uploaded {user_file_input.name.split('.')[-1].upper()} contains very little text. Please upload a valid document.")
-                                show_additional_inputs = False
-                            else:
-                                first_two_pages = extract_first_two_pages(combined_text)
-                                user_input = combined_text
-                                st.session_state.extracted_text = combined_text
-                                st.session_state.processing_complete = True
-                        else:
-                            st.error(f"Could not extract text from the {user_file_input.name.split('.')[-1].upper()} file.")
-                            show_additional_inputs = False
-                        # Clean up progress indicators
-                        progress_placeholder.empty()
-                        status_placeholder.empty()
-                    else:
-                        # Use cached results
-                        user_input = st.session_state.extracted_text
-                        first_two_pages = extract_first_two_pages(user_input)
                 else:
                     st.warning("No file uploaded. Please upload a document.")
+                    user_input = None
+                    first_two_pages = None
                     show_additional_inputs = False
 
             # Only show additional inputs if we have valid text and processing is complete
-            if show_additional_inputs and st.session_state.processing_complete:
+            if show_additional_inputs:
                 if role == "user":
                     try:
                         states = roles_config["usernames"][username]["states"]
