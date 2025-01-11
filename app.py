@@ -2086,7 +2086,7 @@ def main():
             if show_additional_inputs and user_input is not None:
                 if role == "user":
                     try:
-                        states =["New Jersey", "Texas", "Connecticut"]
+                        states = roles_config["usernames"][username]["states"]
                     except:
                         states = []
                 else:
