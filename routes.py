@@ -346,7 +346,7 @@ def extract_text_from_image(reader, image_np):
         print(f"Error extracting text from image: {e}")
         return ""
 
-@st.cache_resource
+# @st.cache_resource
 def load_easyocr():
     """Initialize EasyOCR reader with caching"""
     return easyocr.Reader(['en'], gpu=False)
