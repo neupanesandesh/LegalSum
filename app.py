@@ -47,15 +47,15 @@ def ensure_nltk_data():
     """Check if required NLTK data is present, and download it if necessary."""
     try:
         # Check if 'punkt' tokenizer data is available
-        find('tokenizers/punkt')
+        find('tokenizers/punkt_tab')
     except LookupError:
         # Data is not available, so download it
         # st.info("Downloading NLTK 'punkt' data...")
-        nltk.download('punkt_tab')
+        nltk.download('punkt')
 
 # Call the function at the start of the script
 # ensure_nltk_data()
-ensure_nltk_data()
+
 
 working_driver = None
 if 'email_sent_flag' not in st.session_state:
@@ -278,7 +278,7 @@ def scrap_web(url: str) -> Optional[str]:
     
     try:
         # Step 1: Attempt to fetch with custom headers and longer timeout
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(url, headers=headers, timeout=80)
         response.raise_for_status()
         
         # Step 2: Parse with a more lenient parser
@@ -550,6 +550,7 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         options.add_argument("--no-sandbox")
         options.add_argument("--incognito")
         options.add_argument("--disable-setuid-sandbox")
+        # options.add_argument("--enable-unsafe-swiftshader")
         # options.headless=True
         options.add_argument("--disable-dev-shm-usage")
         options.page_load_strategy = 'eager'
@@ -1305,7 +1306,7 @@ def text_summarizer_alternate(value):
     response = client.chat.completions.create(
         model=GPTModel,
         temperature=0.0,
-        max_tokens=600,
+        max_tokens=1000,
         messages=[
             {"role": "system", "content": context},
             {"role": "user", "content": value}
@@ -1326,6 +1327,7 @@ def text_summarizer_alternate(value):
     # ]
     # })
     # print("API Response:", response)
+    print({"summmmmaaa":summary_response})
     return summary_response 
 
 
@@ -2106,7 +2108,9 @@ def main():
 
                 if st.button("Summarize"):
                     user_input = st.session_state.processed_text
+                    print({"user_inputtt":user_input})
                     first_two_pages = st.session_state.first_two_pages
+                    print({"first2pages":first_two_pages})
                     if user_input is None:
                         st.error("No text to summarize. Please provide input text or upload a document.")
                     elif state == "New Jersey":
@@ -2508,4 +2512,5 @@ def main():
                         st.rerun() 
 
 if __name__ == "__main__":
+    ensure_nltk_data()
     main()

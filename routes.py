@@ -22,7 +22,7 @@ client = OpenAI(
     api_key = OPENAI_API_KEY,
 )
 
-page_count= None
+# page_count= None
 
 GPTModelLight = "gpt-4o-mini"
 GPTModel = "gpt-4o"
@@ -136,7 +136,7 @@ def newsletter(data):
 
 def get_topic_newsletter(data):
     context = f"""
-    I have an article related to drugs. Please generate a topic following this structure: [Main Subject]: [Key Elements]: [Location/Context].
+    I have an article related to drugs. Please generate a topic following this structure: [Main Subject]: [Key Elements].
     Here is an example :
     **Topic:** "Xylazine: Danger Warning: Pennsylvania"
     **Article Summary:** "Pennsylvania's Department of Health Secretary Bogen unveils a new wound care initiative aimed at addressing injuries associated with the use of xylazine, an emerging and dangerous drug."
@@ -211,10 +211,10 @@ def get_newsletter_background(data):
 def create_docx(data_list):
     # Define the order of major heads
     branch_order = {
-        'E': 'EXECUTIVE BRANCH',
-        'L': 'LEGISLATIVE BRANCH',
-        'S': 'STATE OFFICIALS',
-        'O': 'OTHERS'
+        'E': 'Executive Branch',
+        'L': 'Legislative Branch',
+        'S': 'State Officials',
+        'O': 'Others'
     }
 
     # Sort data_list based on branch_head order
@@ -223,15 +223,21 @@ def create_docx(data_list):
     doc = Document()
     
     # Add header "DEA Quotes" with increased font size and centered
-    header = doc.add_heading('DEA Quotes', level=1)
+    header = doc.add_heading('DEA Quotes', level=3)
     run_header = header.runs[0]
-    run_header.font.size = Pt(40)  # Increase font size by 10 times
-    run_header.font.name = 'Arial'
-    run_header._element.rPr.rFonts.set(qn('w:eastAsia'), 'Arial')
+    run_header.font.size = Pt(40)
+    run_header.font.name = 'Times New Roman'  # Set Times New Roman as default font
+    run_header._element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
+    run_header.font.color.rgb = RGBColor(128, 128, 128) 
     header.alignment = 1  # Center alignment
+    
 
-    # Add today's date
-    doc.add_paragraph(datetime.now().strftime("%B %d, %Y"))
+    date_paragraph = doc.add_paragraph()
+    date_paragraph.alignment = 1  # Center alignment
+    date_run = date_paragraph.add_run(datetime.now().strftime("%B %d, %Y"))
+    date_run.font.name = 'Times New Roman'
+    date_run.font.size = Pt(14)  # Adjust font size if needed
+    # date_run.font.color.rgb = RGBColor(128, 128, 128) 
 
     for branch, branch_name in branch_order.items():
         # Filter items by branch_head
@@ -243,60 +249,93 @@ def create_docx(data_list):
             run_branch_heading = branch_heading.add_run(branch_name)
             run_branch_heading.bold = True
             run_branch_heading.font.size = Pt(16)
+            run_branch_heading.font.name = 'Times New Roman'
+            run_branch_heading.font.color.rgb = RGBColor(0, 0, 0)  # Black color
 
             for item in branch_items:
-                # Add the topic to the document, bold only the name "Topic"
+                # Add the topic to the document
                 topic = item['topic']
                 p_topic = doc.add_paragraph()
                 run_topic_label = p_topic.add_run("Topic: ")
                 run_topic_label.bold = True
+                run_topic_label.font.name = 'Times New Roman'
                 run_topic_content = p_topic.add_run(topic)
+                run_topic_content.font.name = 'Times New Roman'
 
-                # Add quoted information, bold only the name "Quoted"
+                # Add quoted information
                 quoted = item.get('quoted', 'No quotes available')
                 p_quoted = doc.add_paragraph()
                 run_quoted_label = p_quoted.add_run("Quoted: ")
                 run_quoted_label.bold = True
+                run_quoted_label.font.name = 'Times New Roman'
                 run_quoted_content = p_quoted.add_run(quoted)
+                run_quoted_content.font.name = 'Times New Roman'
 
-                # Add background information, bold only the name "Background"
+                # Add background information
                 background = item.get('background', 'No background available')
                 p_background = doc.add_paragraph()
                 run_background_label = p_background.add_run("Background: ")
                 run_background_label.bold = True
+                run_background_label.font.name = 'Times New Roman'
                 run_background_content = p_background.add_run(background)
+                run_background_content.font.name = 'Times New Roman'
 
-                # Add names and their quotes
+                # Add names and their quotes with extra spacing
                 people_quotes = item.get('people_quotes', [])
                 if not people_quotes:
-                    doc.add_paragraph("No quotes found in people_quotes.")
+                    p_no_quotes = doc.add_paragraph()
+                    p_no_quotes.paragraph_format.space_after = Pt(0) 
+                    run_no_quotes = p_no_quotes.add_run("No quotes found in people_quotes.")
+                    run_no_quotes.font.name = 'Times New Roman'
                 else:
                     for entry in people_quotes:
+                        # Add extra space before name
+                        doc.add_paragraph()
                         name = entry.get('name', 'Unknown')
-                        quote = entry.get('quote', 'No quote available')
                         p_name = doc.add_paragraph()
+                        p_name.paragraph_format.space_after = Pt(0)
                         run_name = p_name.add_run(name)
-                        run_name.bold = True  # Make the name bold
+                        run_name.bold = True
+                        run_name.font.name = 'Times New Roman'
 
-                        # Add quote in italics
+                        # Add quote with proper formatting
                         p_quote = doc.add_paragraph()
-                        run_quote = p_quote.add_run("Quote \n")
-                        run_quote.bold = True  # Make the quote italic
+                        p_quote.paragraph_format.space_after = Pt(0) 
+                        run_quote = p_quote.add_run("Quote: ")  # Added colon after Quote
+                        run_quote.bold = True
+                        run_quote.font.size = Pt(14)  # Set to 14pt
+                        run_quote.font.name = 'Times New Roman'
+                        
+                        quote = entry.get('quote', 'No quote available')
                         run_quotes = p_quote.add_run(quote)
+                        # run_quotes.paragraph_format.space_after = Pt(0) 
                         run_quotes.italic = True
+                        run_quotes.font.name = 'Times New Roman'
 
-                # Add date
+                # Add date with tighter spacing
                 date = item.get('date', 'No date available')
-                doc.add_paragraph(f" {date}")
+                p_date = doc.add_paragraph()
+                p_date.paragraph_format.space_before = Pt(0)  # No space before
+                p_date.paragraph_format.space_after = Pt(0) # Reduce space before date
+                run_date = p_date.add_run(date)
+                run_date.font.name = 'Times New Roman Italic'
 
-                # Add link as a simple hyperlink
+                # Add link
                 link = item.get('link', 'No link available')
                 p_link = doc.add_paragraph()
+                p_link.paragraph_format.space_before = Pt(0) 
+                p_link.paragraph_format.space_after = Pt(6)# Reduce space before link
                 run_link = p_link.add_run(link)
-                run_link.font.color.rgb = RGBColor(0, 0, 255)  # Blue color for hyperlink
+                run_link.font.color.rgb = RGBColor(0, 0, 255)
                 run_link.font.underline = True
+                run_link.font.name = 'Times New Roman Italic'
 
-                doc.add_paragraph("---")  # Separator between entries
+                # Add separator with consistent spacing
+                p_separator = doc.add_paragraph("---")
+                p_separator.paragraph_format.space_before = Pt(6)  # Small space before
+                p_separator.paragraph_format.space_after = Pt(12)
+                for run in p_separator.runs:
+                    run.font.name = 'Times New Roman'
 
     # Save the document to a file
     doc_path = "newsletter_output.docx"
@@ -305,46 +344,37 @@ def create_docx(data_list):
     return doc_path
 
 
-def extract_image_from_page(pdf_document, page_num):
-    """Extract image from a single PDF page."""
-    try:
-        page = pdf_document[page_num]
-        pix = page.get_pixmap(matrix=fitz.Matrix(100/72, 100/72))  # Reduce resolution
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-        img = img.resize((int(pix.width * 0.5), int(pix.height * 0.5)))  # Resize to 50%
-        return np.array(img)
-    except Exception as e:
-        print(f"Error extracting image from page {page_num}: {e}")
-        return None
+# def extract_image_from_page(pdf_document, page_num):
+#     """Extract image from a single PDF page."""
+#     try:
+#         page = pdf_document[page_num]
+#         pix = page.get_pixmap(matrix=fitz.Matrix(100/72, 100/72))  # Reduce resolution
+#         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+#         img = img.resize((int(pix.width * 0.5), int(pix.height * 0.5)))  # Resize to 50%
+#         return np.array(img)
+#     except Exception as e:
+#         print(f"Error extracting image from page {page_num}: {e}")
+#         return None
 
-def extract_images_from_pdf(pdf_file):
-    """Extract images from all pages of the PDF."""
-    images = []
-    try:
-        pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")
-        with ThreadPoolExecutor() as executor:
-            futures = [
-                executor.submit(extract_image_from_page, pdf_document, page_num) 
-                for page_num in range(len(pdf_document))
-            ]
-            for future in futures:
-                result = future.result()
-                if result is not None:
-                    images.append(result)
-        return images
-    except Exception as e:
-        print(f"Error extracting images from PDF: {e}")
-        return []
+# def extract_images_from_pdf(pdf_file):
+#     """Extract images from all pages of the PDF."""
+#     images = []
+#     try:
+#         pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")
+#         with ThreadPoolExecutor() as executor:
+#             futures = [
+#                 executor.submit(extract_image_from_page, pdf_document, page_num) 
+#                 for page_num in range(len(pdf_document))
+#             ]
+#             for future in futures:
+#                 result = future.result()
+#                 if result is not None:
+#                     images.append(result)
+#         return images
+#     except Exception as e:
+#         print(f"Error extracting images from PDF: {e}")
+#         return []
 
-def extract_text_from_image(reader, image_np):
-    """Extract text from a single image using EasyOCR."""
-    try:
-        results = reader.readtext(image_np)
-        texts = [entry[1] for entry in results] if results else []
-        return " ".join(texts)
-    except Exception as e:
-        print(f"Error extracting text from image: {e}")
-        return ""
 
 @st.cache_resource(show_spinner=False)
 def load_easyocr():
@@ -361,59 +391,43 @@ def process_ocr_pdf(pdf_file):
         pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")
         all_text = []
         
-        # Process first 2 pages with higher quality, rest with lower quality
+        # Process all pages
         for page_num in range(len(pdf_document)):
             try:
                 page = pdf_document[page_num]
-                
-                # Higher quality for first two pages, lower for rest
-                if page_num < 2:
-                    matrix = fitz.Matrix(200/72, 200/72)  # Higher resolution for first 2 pages
-                else:
-                    matrix = fitz.Matrix(100/72, 100/72)  # Lower resolution for rest
-                
+                # Use consistent 150 DPI for all pages
+                matrix = fitz.Matrix(200/72, 200/72)  
                 # Get page image
                 pix = page.get_pixmap(matrix=matrix)
-                
+                # print(f"Page {page_num} - Image size: {pix.width}x{pix.height}")  # Debug size
                 # Convert to PIL Image
                 img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                
-                # Resize image (more aggressive resizing for later pages)
-                if page_num < 2:
-                    new_width = int(pix.width * 0.75)  # 75% of original for first 2 pages
-                else:
-                    new_width = int(pix.width * 0.5)   # 50% of original for rest
-                new_height = int(pix.height * (new_width / pix.width))
-                img = img.resize((new_width, new_height))
-                
+                # Optional: Enhance contrast (helps EasyOCR with faint text)
+                # img = img.convert("L").convert("RGB")  # Convert to grayscale and back to RGB
                 # Convert to numpy array
                 img_np = np.array(img)
-                
                 # Extract text
-                results = reader.readtext(img_np)
-                
+                results = reader.readtext(img_np,paragraph=True, low_text=0.5)
+                # print({"page": page_num, "results": results})
                 # Extract and clean text
                 page_text = " ".join([entry[1] for entry in results if entry[1].strip()])
-                
+                # print({"page": page_num, "page_text": page_text})
                 # Add to collection
                 if page_text.strip():
                     all_text.append(page_text)
-                
-                # Break after processing significant text
-                if page_num >= 2 and len(" ".join(all_text)) > 1000:
-                    break
-                
             except Exception as e:
                 print(f"Error processing page {page_num}: {e}")
                 continue
         
         # Combine all text
-        final_text = " ".join(all_text).strip()
+        final_text_1 = " ".join(all_text).strip()
+        # print({"final_text_1": final_text_1})
+        # print({"all_text": all_text})
         
         # Basic text cleaning
-        final_text = re.sub(r'\s+', ' ', final_text)  # Remove multiple spaces
-        final_text = re.sub(r'[^\x00-\x7F]+', '', final_text)  # Remove non-ASCII characters
-        
+        final_text_2 = re.sub(r'\s+', ' ', final_text_1)  # Remove multiple spaces
+        final_text = re.sub(r'[^\x00-\x7F]+', '', final_text_2)  # Remove non-ASCII characters
+        # print({"final_text": final_text})
         return final_text if final_text else None
 
     except Exception as e:
