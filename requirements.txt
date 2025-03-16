@@ -12,4 +12,4 @@ easyocr==1.7.2
 python-dotenv==1.0.1
 docx2txt==0.8
 bs4==0.0.2
-asyncio==3.4.3
+aiohttp==3.11.13
