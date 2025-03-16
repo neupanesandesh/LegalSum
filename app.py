@@ -1107,21 +1107,49 @@ def is_image_based_docx(docx_file):
         print(f"Error checking DOCX for images: {e}")
         return False
 
+import streamlit as st
+import pypandoc
+import tempfile
+import os
+import zipfile
+import shutil
+
 def convert_docx_to_pdf(docx_file):
-    """Convert a DOCX file to PDF using Pandoc and WeasyPrint."""
+    """Convert a DOCX file to PDF using Pandoc and WeasyPrint, handling images."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Save the uploaded DOCX file temporarily
         temp_docx = os.path.join(temp_dir, "temp.docx")
-        temp_pdf = os.path.join(temp_dir, "temp.pdf")
         with open(temp_docx, "wb") as f:
             f.write(docx_file.getvalue())
 
-        # Convert DOCX to PDF using Pandoc with WeasyPrint
+        # Extract DOCX contents (it's a ZIP file)
+        extract_dir = os.path.join(temp_dir, "extracted")
+        os.makedirs(extract_dir, exist_ok=True)
+        with zipfile.ZipFile(temp_docx, "r") as zip_ref:
+            zip_ref.extractall(extract_dir)
+
+        # Locate the media folder where images are stored
+        media_dir = os.path.join(extract_dir, "word", "media")
+        if not os.path.exists(media_dir):
+            media_dir = None  # No images to process
+
+        # Output PDF path
+        temp_pdf = os.path.join(temp_dir, "temp.pdf")
+
+        # Convert DOCX to PDF with Pandoc and WeasyPrint
+        extra_args = [
+            '--pdf-engine=weasyprint',
+            '--metadata', 'title="Converted Document"',  # Set the title
+        ]
+        if media_dir:
+            # Tell Pandoc where to find the extracted images
+            extra_args.extend(['--resource-path', media_dir])
+
         pypandoc.convert_file(
             temp_docx,
             'pdf',
             outputfile=temp_pdf,
-            extra_args=['--pdf-engine=weasyprint']
+            extra_args=extra_args
         )
 
         # Read the generated PDF
@@ -1129,23 +1157,41 @@ def convert_docx_to_pdf(docx_file):
             pdf_bytes = f.read()
         return pdf_bytes
 
-# Streamlit interface
-st.title("DOCX to PDF Converter")
-uploaded_file = st.file_uploader("Upload a DOCX file", type=["docx"])
+# # Streamlit interface
+# st.title("DOCX to PDF Converter")
+# uploaded_file = st.file_uploader("Upload a DOCX file", type=["docx"])
 
-if uploaded_file is not None:
-    st.write("Converting your file...")
-    try:
-        pdf_bytes = convert_docx_to_pdf(uploaded_file)
-        st.success("Conversion complete!")
-        st.download_button(
-            label="Download PDF",
-            data=pdf_bytes,
-            file_name="converted_file.pdf",
-            mime="application/pdf"
-        )
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+# if uploaded_file is not None:
+#     st.write("Converting your file...")
+#     try:
+#         pdf_bytes = convert_docx_to_pdf(uploaded_file)
+#         st.success("Conversion complete!")
+#         st.download_button(
+#             label="Download PDF",
+#             data=pdf_bytes,
+#             file_name="converted_file.pdf",
+#             mime="application/pdf"
+#         )
+#     except Exception as e:
+#         st.error(f"An error occurred: {str(e)}")
+
+# # Streamlit interface
+# st.title("DOCX to PDF Converter")
+# uploaded_file = st.file_uploader("Upload a DOCX file", type=["docx"])
+
+# if uploaded_file is not None:
+#     st.write("Converting your file...")
+#     try:
+#         pdf_bytes = convert_docx_to_pdf(uploaded_file)
+#         st.success("Conversion complete!")
+#         st.download_button(
+#             label="Download PDF",
+#             data=pdf_bytes,
+#             file_name="converted_file.pdf",
+#             mime="application/pdf"
+#         )
+#     except Exception as e:
+#         st.error(f"An error occurred: {str(e)}")
 
 # def convert_docx_to_pdf(docx_file):
 #     """
