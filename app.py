@@ -286,7 +286,7 @@ def scrap_web(url: str) -> Optional[str]:
         if soup.title and soup.title.string:
             error_indicators = ['404', 'page not found', 'error', 'access denied']
             if any(indicator in soup.title.string.lower() for indicator in error_indicators):
-                print(f"For URL: {url}. Error page detected.")
+                # print(f"For URL: {url}. Error page detected.")
                 return scrape_from_selenium(url)
         
         # Step 4: Handle lazy-loaded content
@@ -300,7 +300,7 @@ def scrap_web(url: str) -> Optional[str]:
         
         # Step 7: Validate content
         if len(text) < 50 or not re.search(r'[.!?]', text):  # Check for proper sentences
-            print(f"For URL: {url}. Content seems incomplete. Attempting to scrape with Selenium.")
+            # print(f"For URL: {url}. Content seems incomplete. Attempting to scrape with Selenium.")
             return scrape_from_selenium(url)
         return text
         
@@ -1120,11 +1120,11 @@ def convert_docx_to_pdf(docx_file):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_dir_path = Path(temp_dir)
             temp_docx = temp_dir_path / "temp.docx"
-
+            
             # Save the uploaded file to temporary location
             with open(temp_docx, "wb") as f:
                 f.write(docx_file.getvalue())
-
+            
             # Convert to PDF using LibreOffice
             process = subprocess.Popen([
                 'libreoffice',
@@ -1135,25 +1135,25 @@ def convert_docx_to_pdf(docx_file):
                 temp_dir,
                 str(temp_docx)
             ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
+            
             process.wait()
-
+            
             # Check if the conversion was successful
             temp_pdf = temp_dir_path / "temp.pdf"
             if not temp_pdf.exists():
                 st.error("PDF conversion failed")
                 return None
-
+            
             # Read the generated PDF into BytesIO
             pdf_bytes = io.BytesIO()
             with open(temp_pdf, "rb") as f:
                 pdf_bytes.write(f.read())
-
+            
             # Reset pointer to start
             pdf_bytes.seek(0)
-
+            
             return pdf_bytes
-
+            
     except Exception as e:
         st.error(f"Error converting DOCX to PDF: {e}")
         return None
@@ -1325,7 +1325,7 @@ def text_summarizer_alternate(value):
     # ]
     # })
     # print("API Response:", response)
-    print({"summmmmaaa":summary_response})
+    # print({"summmmmaaa":summary_response})
     return summary_response 
 
 
@@ -1370,14 +1370,14 @@ def title(value):
         {"role": "user", "content": value}
         ]
     )
-    print("new2")
-    print (title_response.choices[0].message.content)
+    # print("new2")
+    # print (title_response.choices[0].message.content)
     
     title_case = title_response.choices[0].message.content
     
     title_case = abbreviate_title(title_case)
     
-    print(title_case + ' : NLP')
+    # print(title_case + ' : NLP')
     return title_case
 
 def Connecticut_summarizer(value):
@@ -1412,7 +1412,7 @@ def Connecticut_summarizer(value):
         ]
     )
     
-    print (court_response.choices[0].message.content)
+    # print (court_response.choices[0].message.content)
     court_case = court_response.choices[0].message.content
     
     prompt_num = """
@@ -1429,7 +1429,7 @@ def Connecticut_summarizer(value):
         {"role": "user", "content": first_two_pages}
         ]
     )
-    print (num_response.choices[0].message.content)
+    # print (num_response.choices[0].message.content)
     
     num_case = num_response.choices[0].message.content
     
@@ -1462,7 +1462,7 @@ def Connecticut_summarizer(value):
         judge_name = name.last + ", J."  #.capitalize()
             
     
-    print (judge_response.choices[0].message.content)
+    # print (judge_response.choices[0].message.content)
     date_response = client.chat.completions.create(
                 model=GPTModel,
                 temperature=0.2,
@@ -1551,7 +1551,7 @@ def Connecticut_summarizer(value):
         {"role": "user", "content": value}
         ]
     )
-    print (taxonomy_response.choices[0].message.content)
+    # print (taxonomy_response.choices[0].message.content)
     practice_area = taxonomy_response.choices[0].message.content
     
     
@@ -1608,7 +1608,7 @@ def Connecticut_summarizer(value):
         {"role": "user", "content": value}
         ]
     )
-    print (practice_response.choices[0].message.content)
+    # print (practice_response.choices[0].message.content)
     
     practice_case = practice_response.choices[0].message.content
     prompt_title = "you are a US lawyer, and will read a legal decision and return the title of the case, only the title, nothing else, the title should describe in a sentence the case without mentioning the plaintiff and the defendants."
@@ -1622,7 +1622,7 @@ def Connecticut_summarizer(value):
         {"role": "user", "content": first_two_pages}
         ]
     )
-    print (title_response.choices[0].message.content)
+    # print (title_response.choices[0].message.content)
     title_case = title_response.choices[0].message.content
     summary = f"""
 CASE: {name_case} \n
@@ -1650,7 +1650,7 @@ def Texas_summarizer(value):
     # Display the generated summary
     summary = text_summarizer_alternate(value)
     first_two_pages = extract_first_two_pages(value)
-    print(summary)
+    # print(summary)
     
     summary = summary.replace("District Court", "district court")
     
@@ -1728,7 +1728,7 @@ def Texas_summarizer(value):
         {"role": "user", "content": value}
         ]
     )
-    print (taxonomy_response.choices[0].message.content)
+    # print (taxonomy_response.choices[0].message.content)
     
     summary = taxonomy_response.choices[0].message.content + "  \n" + summary
     summary = summary + "  \n" + title(first_two_pages)
@@ -1754,7 +1754,7 @@ def Texas_summarizer(value):
         {"role": "user", "content": first_two_pages}
         ]
     )
-    print (court_response.choices[0].message.content)
+    # print (court_response.choices[0].message.content)
     summary = summary + ", " + court_response.choices[0].message.content
     
     case_number = ('I will send you a legal decision and you will detect the case number and return it, just the case number nothing else ')
@@ -1768,7 +1768,7 @@ def Texas_summarizer(value):
         {"role": "user", "content": first_two_pages}
         ]
     )
-    print (case_number_response.choices[0].message.content)
+    # print (case_number_response.choices[0].message.content)
     
     case_num = remove_suffix(case_number_response.choices[0].message.content)
     summary = summary + ", " + case_num
@@ -2106,9 +2106,9 @@ def main():
 
                 if st.button("Summarize"):
                     user_input = st.session_state.processed_text
-                    print({"user_inputtt":user_input})
+                    # print({"user_inputtt":user_input})
                     first_two_pages = st.session_state.first_two_pages
-                    print({"first2pages":first_two_pages})
+                    # print({"first2pages":first_two_pages})
                     if user_input is None:
                         st.error("No text to summarize. Please provide input text or upload a document.")
                     elif state == "New Jersey":
@@ -2117,7 +2117,7 @@ def main():
                         summary = text_summarizer_alternate(user_input) 
                     
                         
-                        print(summary)
+                        # print(summary)
                         
                         summary = summary.replace("District Court", "district court")
                         st.subheader("Summary:")
@@ -2192,7 +2192,7 @@ def main():
                             judge_name = name.last + ", J."  #.capitalize()
                         
                         summary = " (" + judge_name + ") (" + str(page_count) + " pp.) "  + summary 
-                        print (judge_response.choices[0].message.content)
+                        # print (judge_response.choices[0].message.content)
                         
                         # court option
                         
@@ -2298,7 +2298,7 @@ def main():
                             {"role": "user", "content": user_input}
                             ]
                         )
-                        print (taxonomy_response.choices[0].message.content)
+                        # print (taxonomy_response.choices[0].message.content)
                         summary = taxonomy_response.choices[0].message.content + "-" + court_response.choices[0].message.content + "-XXXX " + summary
                         
                         hash_table = {

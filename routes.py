@@ -121,16 +121,16 @@ def newsletter(data):
     )
     
     response_content = response.choices[0].message.content
-    print({"response_content":response_content})
+    # print({"response_content":response_content})
     cleaned_response = response_content.replace('```json\n', "").replace('\n```', "")
-    print({"cleaned":cleaned_response})
+    # print({"cleaned":cleaned_response})
     # Parse the JSON response
     try:
         structured_data = json.loads(cleaned_response)
     except json.JSONDecodeError as e:
         print("Failed to decode JSON:", e)
         return None
-    print(structured_data)
+    # print(structured_data)
     return structured_data
 
 
@@ -169,7 +169,7 @@ def get_topic_newsletter(data):
     except json.JSONDecodeError as e:
         print("Failed to decode JSON:", e)
         return None
-    print(structured_data)
+    # print(structured_data)
     return structured_data
 
 
@@ -204,7 +204,7 @@ def get_newsletter_background(data):
     except json.JSONDecodeError as e:
         print("Failed to decode JSON:", e)
         return None
-    print(structured_data)
+    # print(structured_data)
     return structured_data
 
 
@@ -391,43 +391,46 @@ def process_ocr_pdf(pdf_file):
         pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")
         all_text = []
         
-        # Process all pages
+        # Process first 2 pages with higher quality, rest with lower quality
         for page_num in range(len(pdf_document)):
             try:
                 page = pdf_document[page_num]
-                # Use consistent 150 DPI for all pages
-                matrix = fitz.Matrix(200/72, 200/72)  
+                
+                matrix = fitz.Matrix(150/72, 150/72) 
                 # Get page image
                 pix = page.get_pixmap(matrix=matrix)
-                # print(f"Page {page_num} - Image size: {pix.width}x{pix.height}")  # Debug size
+                
                 # Convert to PIL Image
                 img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                # Optional: Enhance contrast (helps EasyOCR with faint text)
-                # img = img.convert("L").convert("RGB")  # Convert to grayscale and back to RGB
+                new_width = int(pix.width * 0.75)  # 75% of original for first 2 pages
+
+                new_height = int(pix.height * (new_width / pix.width))
+                img = img.resize((new_width, new_height))
+                
                 # Convert to numpy array
                 img_np = np.array(img)
+                
                 # Extract text
-                results = reader.readtext(img_np,paragraph=True, low_text=0.5)
-                # print({"page": page_num, "results": results})
+                results = reader.readtext(img_np)
+                
                 # Extract and clean text
                 page_text = " ".join([entry[1] for entry in results if entry[1].strip()])
-                # print({"page": page_num, "page_text": page_text})
+                
                 # Add to collection
                 if page_text.strip():
                     all_text.append(page_text)
+                
             except Exception as e:
                 print(f"Error processing page {page_num}: {e}")
                 continue
         
         # Combine all text
-        final_text_1 = " ".join(all_text).strip()
-        # print({"final_text_1": final_text_1})
-        # print({"all_text": all_text})
+        final_text = " ".join(all_text).strip()
         
         # Basic text cleaning
-        final_text_2 = re.sub(r'\s+', ' ', final_text_1)  # Remove multiple spaces
-        final_text = re.sub(r'[^\x00-\x7F]+', '', final_text_2)  # Remove non-ASCII characters
-        # print({"final_text": final_text})
+        final_text = re.sub(r'\s+', ' ', final_text)  # Remove multiple spaces
+        final_text = re.sub(r'[^\x00-\x7F]+', '', final_text)  # Remove non-ASCII characters
+        
         return final_text if final_text else None
 
     except Exception as e:
