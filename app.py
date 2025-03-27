@@ -16,7 +16,7 @@ import subprocess
 from nltk.data import find
 import traceback
 from selenium import webdriver
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, List
 import concurrent.futures
 from selenium.webdriver.chrome.options import Options
 import io
@@ -263,19 +263,17 @@ def handle_lazy_loading(soup: BeautifulSoup) -> None:
                 if content:
                     element.string = content
                     
-def handle_selenium_fallback(url: str) -> Optional[str]:
-    """Handle Selenium fallback with environment detection."""
-    # Debug: Show environment variables in Streamlit Cloud
-    if "STREAMLIT_DEBUG_ENV" not in os.environ:
-        os.environ["STREAMLIT_DEBUG_ENV"] = "1"
-        st.write("Debug: Environment variables:", dict(os.environ))
-    
-    # Check if running on Streamlit Cloud (tentative check, refine after debug)
+def handle_selenium_fallback(url: str) -> Tuple[Optional[str], Optional[str]]:
+    """Handle Selenium fallback with environment detection, returning content and message."""
+    # Check if running on Streamlit Cloud (tentative, refine after debug)
     is_streamlit_cloud = "REPL_ID" in os.environ or "STREAMLIT_SERVER_PORT" in os.environ
     if is_streamlit_cloud:
-        st.warning(f"Scraping failed for {url}. Selenium fallback is disabled on Streamlit Cloud.")
-        return None
-    return scrape_from_selenium(url)[0]  # Return content only
+        return None, f"Scraping failed for {url}. Selenium fallback is disabled on Streamlit Cloud."
+    
+    content, error = scrape_from_selenium(url)
+    if error:
+        return None, f"Selenium failed for {url}: {error}"
+    return content, None
 
 def scrap_web(url: str) -> Optional[str]:
     """
@@ -289,42 +287,35 @@ def scrap_web(url: str) -> Optional[str]:
     }
     
     try:
-        # Step 1: Attempt to fetch with custom headers and longer timeout
         response = requests.get(url, headers=headers, timeout=80)
         response.raise_for_status()
         
-        # Step 2: Parse with a more lenient parser
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Step 3: Check for error pages
         if soup.title and soup.title.string:
             error_indicators = ['404', 'page not found', 'error', 'access denied']
             if any(indicator in soup.title.string.lower() for indicator in error_indicators):
-                # print(f"For URL: {url}. Error page detected.")
-                return scrape_from_selenium(url)
+                print(f"For URL: {url}. Error page detected.")
+                return handle_selenium_fallback(url)[0]
         
-        # Step 4: Handle lazy-loaded content
         handle_lazy_loading(soup)
-        
-        # Step 5: Remove unwanted elements
         remove_unwanted_elements(soup)
-        
-        # Step 6: Extract main content
         text = extract_main_content(soup)
         
-        if len(text) < 50 or not re.search(r'[.!?]', text):  # Check for proper sentences
-            print(f"For URL: {url}. Content seems incomplete. Attempting fallback.")
-            return handle_selenium_fallback(url)
+        if len(text) < 50 or not re.search(r'[.!?]', text):
+            print(f"For URL: {url}. Content seems incomplete.")
+            return handle_selenium_fallback(url)[0]
         return text
+        
     except requests.exceptions.Timeout:
-        print(f"For URL: {url}. Timeout occurred. Attempting to scrape with Selenium.")
-        return scrape_from_selenium(url)
+        print(f"For URL: {url}. Timeout occurred.")
+        return handle_selenium_fallback(url)[0]
     except requests.exceptions.SSLError:
-        print(f"For URL: {url}. SSL error occurred. Attempting to scrape with Selenium.")
-        return scrape_from_selenium(url)
+        print(f"For URL: {url}. SSL error occurred.")
+        return handle_selenium_fallback(url)[0]
     except requests.exceptions.RequestException as e:
-        print(f"For URL: {url}. Error: {e}. Attempting to scrape with Selenium.")
-        return scrape_from_selenium(url)
+        print(f"For URL: {url}. Error: {e}.")
+        return handle_selenium_fallback(url)[0]
     
 def wait_for_page_load(driver, timeout=10):
     """ Enhanced wait for page load with additional checks """
@@ -552,40 +543,18 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
     driver = None
     try:
         options = Options()
-        # options.binary_location = "/usr/bin/chromium-browser"
-        # Enhanced GPU and rendering configuration
         options.add_argument("--headless")
         options.add_argument("--start-maximized")
-        options.add_argument("--disable-gpu")  # Completely disable GPU hardware acceleration
+        options.add_argument("--disable-gpu")
         options.add_argument("--no-sandbox")
         options.add_argument("--incognito")
         options.add_argument("--disable-setuid-sandbox")
-        # options.add_argument("--enable-unsafe-swiftshader")
-        # options.headless=True
         options.add_argument("--disable-dev-shm-usage")
         options.page_load_strategy = 'eager'
         options.add_argument("--disable-features=OptimizationGuideModelDownloading")
         options.add_argument('--blink-settings=imagesEnabled=false')
         options.add_argument("--disable-audio-output")
         options.add_argument("--disable-video")
-        # options.add_argument('--disable-infobars')
-        # # options.add_argument("--headless=new")
-        
-        # # More robust graphics rendering fallback
-        # # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
-        # options.add_argument("--disable-software-rasterizer")
-        # options.add_argument("--renderer-process-limit=1")  # Limit renderer processes
-        # options.add_argument("--enable-unsafe-swiftshader")
-        # # Media and audio configuration
-        # options.add_argument("--disable-extensions")
-        # options.add_argument("--disable-logging")
-        # options.add_argument("--disable-crash-reporter")
-        # options.add_argument("--disable-background-networking")
-        # options.add_argument("--remote-debugging-port=9222")
-
-
-        # # Ignore specific graphics and media errors
-        # options.add_experimental_option('excludeSwitches', ['enable-logging'])
         
         prefs = {
             "profile.managed_default_content_settings.images": 2,
@@ -594,28 +563,20 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         options.add_experimental_option("prefs", prefs)
         driver = webdriver.Chrome(options=options)
         
-        # driver.set_page_load_timeout(timeout)
         driver.get(url)
         time.sleep(3)
-        # Wait for initial page load
         wait_for_page_load(driver, timeout)
-
-        # Handle dynamic content
         wait_for_dynamic_elements(driver)
-        # scroll_page_dynamically(driver)
         handle_popups(driver)
 
-        # Extract content from all possible sources
         main_content = find_main_content(driver)
         frame_content = detect_and_handle_frames(driver)
         shadow_content = handle_shadow_dom(driver)
 
-        # Combine and clean content
         all_content = ' '.join(filter(None, [main_content, frame_content, shadow_content]))
         cleaned_content = clean_extracted_text(all_content)
 
-        # Validate content
-        if len(cleaned_content) < 20:  # Minimum content threshold
+        if len(cleaned_content) < 20:
             return None, "Insufficient content extracted"
 
         return cleaned_content, None
@@ -2290,32 +2251,23 @@ def main():
                 
         elif app_mode == "Newsletter Quotes":
 
-            def process_single_link(item):
+            def process_single_link(item: Dict) -> Optional[Dict]:
                 """
-                Process a single link with error handling and concurrent execution
-                
-                Args:
-                    item (dict): Dictionary containing link and other item details
-                
-                Returns:
-                    dict or None: Processed newsletter data or None if processing fails
+                Process a single link with error handling and concurrent execution.
                 """
                 try:
-                    # Attempt to scrape web content
                     web_content = scrap_web(item['link'])
                     if web_content is None:
-                        st.warning(f"Failed to scrape content from {item['link']}")
-                        return None
+                        # Return a dict with an error message for the main thread to handle
+                        return {"error": f"Failed to scrape content from {item['link']}"}
 
-                    # Extract newsletter information
                     newsletter_topic = get_topic_newsletter(web_content)
                     newsletter_data = newsletter(web_content)
                     newsletter_background = get_newsletter_background(web_content)
 
                     if newsletter_data is None:
-                        return None
+                        return {"error": f"No newsletter data extracted from {item['link']}"}
 
-                    # Process people quotes
                     people_quotes = newsletter_data['newsletter']['people']
                     background = newsletter_background.get('background', 'No background available')
                     quoted = newsletter_data.get('quoted', 'No quotes available')
@@ -2328,10 +2280,8 @@ def main():
                         } for person in people_quotes
                     ]
 
-                    # Format date
                     formatted_date = format_date_and_info(item['date'])
 
-                    # Construct final data dictionary
                     return {
                         'topic': extracted_topic,
                         'background': background,
@@ -2343,42 +2293,27 @@ def main():
                     }
                 
                 except KeyError as e:
-                    st.warning(f"Error processing data for {item['link']}: Missing key {e}. Skipping...")
+                    return {"error": f"Error processing data for {item['link']}: Missing key {e}"}
                 except Exception as e:
-                    st.warning(f"An error occurred with {item['link']}: {e}. Skipping...")
-                
-                return None
+                    return {"error": f"An error occurred with {item['link']}: {e}"}
 
-            def process_data(uploaded_file):
+            def process_data(uploaded_file) -> List[Dict]:
                 """
-                Process newsletter quotes data from an uploaded file concurrently
-                
-                Args:
-                    uploaded_file (file): Excel file to be processed
-                
-                Returns:
-                    list: Processed newsletter items
+                Process newsletter quotes data from an uploaded file concurrently.
                 """
-                # Read the Excel file
                 df = pd.read_excel(uploaded_file, header=None)
                 df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
                 
-                # Filter and prepare items for processing
                 results = list(filter(None, df.apply(process_row, axis=1)))
                 
-                # Process links concurrently
                 with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-                    # Submit all tasks and collect futures
                     futures = [executor.submit(process_single_link, item) for item in results]
-                    
-                    # Collect results as they complete
-                    all_items = [
-                        future.result() 
-                        for future in concurrent.futures.as_completed(futures) 
-                        if future.result() is not None
-                    ]
+                    all_items = [future.result() for future in concurrent.futures.as_completed(futures)]
                 
-                return all_items
+                # Separate successful results from errors
+                successful_items = [item for item in all_items if "error" not in item]
+                errors = [item["error"] for item in all_items if "error" in item]
+                return successful_items, errors
 
 
             # Title of the app
@@ -2400,11 +2335,15 @@ def main():
             if st.session_state['processed_data'] is None:
                 uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx", key=st.session_state.file_uploader_key)
 
-                # If a file is uploaded and not already processed
                 if uploaded_file is not None:
-                    with st.spinner("Processing..."):
-                        st.session_state['processed_data'] = process_data(uploaded_file)
-
+                            with st.spinner("Processing..."):
+                                successful_items, errors = process_data(uploaded_file)
+                                st.session_state['processed_data'] = successful_items
+                                if errors:
+                                    for error in errors:
+                                        st.warning(error)
+                                    if "REPL_ID" in os.environ or "STREAMLIT_SERVER_PORT" in os.environ:
+                                        st.write("Debug: Environment variables:", dict(os.environ))
             # If the data is processed
             if st.session_state['processed_data']:
                 docx_path = create_docx(st.session_state['processed_data'])
