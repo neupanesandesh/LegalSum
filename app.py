@@ -2506,3 +2506,4 @@ def main():
 
 if __name__ == "__main__":
     ensure_nltk_data()
+    main()
