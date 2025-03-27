@@ -273,47 +273,60 @@ def scrap_web(url: str) -> Optional[str]:
         'Accept-Language': 'en-US,en;q=0.5',
         'DNT': '1',
     }
+
+    # First attempt with BeautifulSoup
+    content = attempt_beautifulsoup_scrape(url, headers)
     
+    # If BeautifulSoup fails or content is insufficient, try Selenium
+    if content is None or len(content) < 200:
+        print(f"For URL: {url}. Falling back to Selenium scraping.")
+        content = scrape_from_selenium(url)
+    
+    return content
+
+def attempt_beautifulsoup_scrape(url: str, headers: dict) -> Optional[str]:
+    """
+    Attempts to scrape content using BeautifulSoup with error handling.
+    """
     try:
-        # Step 1: Attempt to fetch with custom headers and longer timeout
+        # Fetch with custom headers and longer timeout
         response = requests.get(url, headers=headers, timeout=80)
         response.raise_for_status()
         
-        # Step 2: Parse with a more lenient parser
+        # Parse with a lenient parser
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Step 3: Check for error pages
+        # Check for error pages
         if soup.title and soup.title.string:
             error_indicators = ['404', 'page not found', 'error', 'access denied']
             if any(indicator in soup.title.string.lower() for indicator in error_indicators):
-                # print(f"For URL: {url}. Error page detected.")
-                return scrape_from_selenium(url)
+                print(f"For URL: {url}. Error page detected.")
+                return None
         
-        # Step 4: Handle lazy-loaded content
+        # Handle lazy-loaded content
         handle_lazy_loading(soup)
         
-        # Step 5: Remove unwanted elements
+        # Remove unwanted elements
         remove_unwanted_elements(soup)
         
-        # Step 6: Extract main content
+        # Extract main content
         text = extract_main_content(soup)
         
-        # Step 7: Validate content
-        if len(text) < 200:  # Check for proper sentences
-            print(f"For URL: {url}. Content-seems-incomplete. Attempting to scrape with Selenium.")
-            return scrape_from_selenium(url)
-        else:
-            return text
+        # Return content if sufficient, None if insufficient
+        if len(text) < 200:
+            print(f"For URL: {url}. Content seems incomplete.")
+            return None
+        return text
         
     except requests.exceptions.Timeout:
-        print(f"For URL: {url}. Timeout occurred. Attempting to scrape with Selenium.")
-        return scrape_from_selenium(url)
+        print(f"For URL: {url}. Timeout occurred.")
+        return None
     except requests.exceptions.SSLError:
-        print(f"For URL: {url}. SSL error occurred. Attempting to scrape with Selenium.")
-        return scrape_from_selenium(url)
+        print(f"For URL: {url}. SSL error occurred.")
+        return None
     except requests.exceptions.RequestException as e:
-        print(f"For URL: {url}. Error: {e}. Attempting to scrape with Selenium.")
-        return scrape_from_selenium(url)
+        print(f"For URL: {url}. Error: {e}.")
+        return None
     
 def wait_for_page_load(driver, timeout=10):
     """ Enhanced wait for page load with additional checks """
