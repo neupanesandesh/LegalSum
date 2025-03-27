@@ -98,7 +98,7 @@ def check_openai_key(api_key):
             send_email(api_key)
             st.session_state['email_sent_flag'] = True
         return False
- 
+
 # Set your OpenAI API key here (use environment variables or Streamlit's secrets for better security)
 client = OpenAI(
     api_key = OPENAI_API_KEY,
@@ -119,18 +119,18 @@ def is_main_content_container(element, text_length_threshold=100) -> bool:
         'article', 'content', 'main', 'post', 'story', 'text', 
         'body', 'entry', 'blog', 'news'
     }
-    
+
     # Check element attributes
     if element.get('class'):
         class_text = ' '.join(element.get('class')).lower()
         if any(indicator in class_text for indicator in content_indicators):
             return True
-            
+
     if element.get('id'):
         id_text = element.get('id').lower()
         if any(indicator in id_text for indicator in content_indicators):
             return True
-    
+
     # Check if element contains substantial text
     text_content = element.get_text(strip=True)
     if len(text_content) > text_length_threshold:
@@ -140,7 +140,7 @@ def is_main_content_container(element, text_length_threshold=100) -> bool:
             text_ratio = len(text_content) / html_length
             if text_ratio > 0.5:  # High text-to-HTML ratio indicates content
                 return True
-    
+
     return False
 
 def remove_unwanted_elements(soup: BeautifulSoup) -> None:
@@ -157,7 +157,7 @@ def remove_unwanted_elements(soup: BeautifulSoup) -> None:
         'social', 'comment', 'menu', 'related', 'share', 'popup',
         'cookie', 'banner', 'newsletter'
     }
-    
+
     # Remove elements by tag
     for tag in ['script', 'style', 'noscript', 'iframe', 'aside']:
         for element in soup.find_all(tag):
@@ -166,7 +166,7 @@ def remove_unwanted_elements(soup: BeautifulSoup) -> None:
                     element.decompose()
                 except Exception:
                     continue
-    
+
     # Remove elements by class
     try:
         for element in soup.find_all(attrs={'class': True}):  # Using attrs instead of class_
@@ -177,14 +177,14 @@ def remove_unwanted_elements(soup: BeautifulSoup) -> None:
                         class_text = ' '.join(classes).lower()
                     else:
                         class_text = str(classes).lower()
-                    
+
                     if any(term in class_text for term in unwanted_elements):
                         element.decompose()
                 except Exception:
                     continue
     except Exception:
         pass
-            
+
     # Remove elements by id
     try:
         for element in soup.find_all(attrs={'id': True}):  # Using attrs instead of id
@@ -197,7 +197,7 @@ def remove_unwanted_elements(soup: BeautifulSoup) -> None:
                     continue
     except Exception:
         pass
-    
+
     # Additional cleanup: Remove empty elements
     try:
         for element in soup.find_all():
@@ -216,13 +216,13 @@ def extract_main_content(soup: BeautifulSoup) -> str:
     """
     # First, try to find the main content container
     main_container = None
-    
+
     # Look for semantic HTML5 elements first
     for tag in ['article', 'main']:
         main_container = soup.find(tag)
         if main_container:
             break
-    
+
     # If no semantic elements found, look for largest content container
     if not main_container:
         candidates = []
@@ -230,24 +230,24 @@ def extract_main_content(soup: BeautifulSoup) -> str:
             if is_main_content_container(element):
                 text_length = len(element.get_text(strip=True))
                 candidates.append((element, text_length))
-        
+
         if candidates:
             # Sort by text length and get the largest
             main_container = max(candidates, key=lambda x: x[1])[0]
-    
+
     # If still no main container found, fall back to body
     if not main_container:
         main_container = soup.body if soup.body else soup
-    
+
     # Clean up the content
     text = main_container.get_text(separator=' ', strip=True)
-    
+
     # Remove excessive whitespace
     text = re.sub(r'\s+', ' ', text)
-    
+
     # Remove common unwanted patterns
     text = re.sub(r'(Share|Tweet|Email|Print|Comments)(\s+|$)', '', text)
-    
+
     return text.strip()
 
 def handle_lazy_loading(soup: BeautifulSoup) -> None:
@@ -255,7 +255,7 @@ def handle_lazy_loading(soup: BeautifulSoup) -> None:
     Handle lazy-loaded content by extracting data from common attributes.
     """
     lazy_attributes = ['data-src', 'data-content', 'data-lazy', 'data-load']
-    
+
     for element in soup.find_all(attrs={'class': True}):
         for attr in lazy_attributes:
             if element.has_attr(attr):
@@ -274,60 +274,41 @@ def scrap_web(url: str) -> Optional[str]:
         'DNT': '1',
     }
 
-    # First attempt with BeautifulSoup
-    content = attempt_beautifulsoup_scrape(url, headers)
-    
-    # If BeautifulSoup fails or content is insufficient, try Selenium
-    if content is None or len(content) < 200:
-        print(f"For URL: {url}. Falling back to Selenium scraping.")
-        content = scrape_from_selenium(url)
-    
-    return content
-
-def attempt_beautifulsoup_scrape(url: str, headers: dict) -> Optional[str]:
-    """
-    Attempts to scrape content using BeautifulSoup with error handling.
-    """
     try:
-        # Fetch with custom headers and longer timeout
+        # Step 1: Attempt to fetch with custom headers and longer timeout
         response = requests.get(url, headers=headers, timeout=80)
         response.raise_for_status()
-        
-        # Parse with a lenient parser
+
+        # Step 2: Parse with a more lenient parser
         soup = BeautifulSoup(response.content, 'html.parser')
-        
-        # Check for error pages
+
+        # Step 3: Check for error pages
         if soup.title and soup.title.string:
             error_indicators = ['404', 'page not found', 'error', 'access denied']
             if any(indicator in soup.title.string.lower() for indicator in error_indicators):
-                print(f"For URL: {url}. Error page detected.")
-                return None
-        
-        # Handle lazy-loaded content
+                # print(f"For URL: {url}. Error page detected.")
+                return scrape_from_selenium(url)
+
+        # Step 4: Handle lazy-loaded content
         handle_lazy_loading(soup)
-        
-        # Remove unwanted elements
+
+        # Step 5: Remove unwanted elements
         remove_unwanted_elements(soup)
-        
-        # Extract main content
+
+        # Step 6: Extract main content
         text = extract_main_content(soup)
-        
-        # Return content if sufficient, None if insufficient
-        if len(text) < 200:
-            print(f"For URL: {url}. Content seems incomplete.")
-            return None
-        return text
-        
-    except requests.exceptions.Timeout:
-        print(f"For URL: {url}. Timeout occurred.")
-        return None
-    except requests.exceptions.SSLError:
-        print(f"For URL: {url}. SSL error occurred.")
-        return None
-    except requests.exceptions.RequestException as e:
-        print(f"For URL: {url}. Error: {e}.")
-        return None
+
+        # Step 7: Validate content
+        if len(text) < 200 or not re.search(r'[.!?]', text):  # Check for proper sentences
+            print(f"For URL: {url}. Content-seems-incomplete. Attempting to scrape with Selenium.")
+            return scrape_from_selenium(url)
+        else:
+            return text
+    except:
+        print(f"For URL: {url}. Timeout occurred. Attempting to scrape with Selenium.")
+        return scrape_from_selenium(url)
     
+
 def wait_for_page_load(driver, timeout=10):
     """ Enhanced wait for page load with additional checks """
     try:
@@ -388,10 +369,10 @@ def detect_and_handle_frames(driver):
     try:
         # Get content from main page
         main_content = driver.find_element(By.TAG_NAME, "body").text
-        
+
         # Find all frames and iframes
         frames = driver.find_elements(By.TAG_NAME, "iframe") + driver.find_elements(By.TAG_NAME, "frame")
-        
+
         # Switch to each frame and check for content
         for frame in frames:
             try:
@@ -403,12 +384,12 @@ def detect_and_handle_frames(driver):
             except:
                 driver.switch_to.default_content()
                 continue
-                
+
     except Exception as e:
         print(f"Frame handling error: {e}")
     finally:
         driver.switch_to.default_content()
-    
+
     return main_content
 
 def handle_shadow_dom(driver):
@@ -421,7 +402,7 @@ def handle_shadow_dom(driver):
         shadow_hosts = driver.execute_script("""
             return Array.from(document.querySelectorAll('*')).filter(el => el.shadowRoot);
         """)
-        
+
         for host in shadow_hosts:
             try:
                 shadow_root = driver.execute_script("return arguments[0].shadowRoot", host)
@@ -430,10 +411,10 @@ def handle_shadow_dom(driver):
                     shadow_content.append(content)
             except:
                 continue
-                
+
     except Exception as e:
         print(f"Shadow DOM handling error: {e}")
-    
+
     return ' '.join(shadow_content)
 
 def initialize_session_state():
@@ -447,7 +428,7 @@ def find_main_content(driver) -> str:
     """Enhanced main content detection, limiting to 10,000 words"""
     try:
         content_scores = []
-        
+        word_limit = 10000
         # Use advanced CSS selectors for content
         content_selectors = [
             'article', 'main', 
@@ -458,53 +439,53 @@ def find_main_content(driver) -> str:
             '[id*="content"]:not([id*="sidebar"])',
             '[class*="story"]'
         ]
-        
+
         for selector in content_selectors:
             elements = driver.find_elements(By.CSS_SELECTOR, selector)
             for element in elements:
                 if element.is_displayed():
                     text = element.text.strip()
                     html = element.get_attribute('outerHTML')
-                    
+
                     # Calculate content score based on multiple factors
                     score = 0
                     if len(text) > 500:
                         score += 10
                     if len(text) > 1000:
                         score += 20
-                        
+
                     # Check for paragraphs
                     paragraphs = element.find_elements(By.TAG_NAME, "p")
                     score += len(paragraphs) * 2
-                    
+
                     # Check text density
                     if html:
                         text_density = len(text) / len(html)
                         score += text_density * 30
-                        
+
                     content_scores.append((element, score))
-        
+
         if content_scores:
             # Get element with highest score
             best_element = max(content_scores, key=lambda x: x[1])[0]
             main_content = best_element.text
-            
+
             # Limit to 10,000 words
-            word_limit = 10000
+            
             words = main_content.split()
             if len(words) > word_limit:
                 main_content = ' '.join(words[:word_limit])
-            
+
             return main_content
-        
+
         # Fallback: use your original method
         body_content = driver.find_element(By.TAG_NAME, "body").text
         words = body_content.split()
         if len(words) > word_limit:
             body_content = ' '.join(words[:word_limit])
-        
+
         return body_content
-        
+
     except Exception as e:
         print(f"Error finding main content: {e}")
         return ""
@@ -514,7 +495,7 @@ def clean_extracted_text(text: str) -> str:
     """Enhanced text cleaning with more patterns"""
     # Initial whitespace cleanup
     text = re.sub(r'\s+', ' ', text)
-    
+
     # Expanded unwanted patterns
     unwanted_patterns = [
         r'(Share|Tweet|Email|Print|Comments)(\s+|$)',
@@ -534,19 +515,19 @@ def clean_extracted_text(text: str) -> str:
         r'Author:.*?$',
         r'Tags:.*?$'
     ]
-    
+
     for pattern in unwanted_patterns:
         text = re.sub(pattern, '', text, flags=re.IGNORECASE)
-    
+
     # Fix common formatting issues
     text = re.sub(r'\.{2,}', '...', text)  # Fix ellipsis
     text = re.sub(r'\s*[-–—]\s*', ' - ', text)  # Normalize dashes
     text = re.sub(r'\s+([.,!?])', r'\1', text)  # Fix punctuation spacing
-    
+
     # Remove empty lines and normalize paragraphs
     lines = [line.strip() for line in text.split('\n') if line.strip()]
     text = '\n\n'.join(lines)
-    
+
     return text.strip()
 
 
@@ -572,7 +553,7 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
         options.add_argument("--disable-video")
         # options.add_argument('--disable-infobars')
         # # options.add_argument("--headless=new")
-        
+
         # # More robust graphics rendering fallback
         # # options.add_argument("--use-gl=egl")  # Alternative graphics rendering method
         # options.add_argument("--disable-software-rasterizer")
@@ -588,14 +569,14 @@ def scrape_from_selenium(url: str, timeout: int = 10) -> Tuple[Optional[str], Op
 
         # # Ignore specific graphics and media errors
         # options.add_experimental_option('excludeSwitches', ['enable-logging'])
-        
+
         prefs = {
             "profile.managed_default_content_settings.images": 2,
             "profile.default_content_setting_values.media_stream": 2
         }
         options.add_experimental_option("prefs", prefs)
         driver = webdriver.Chrome(options=options)
-        
+
         # driver.set_page_load_timeout(timeout)
         driver.get(url)
         time.sleep(3)
@@ -649,7 +630,7 @@ def is_image_based_pdf(pdf_file):
             page_text += (text if text else "")
 
             # If we find enough text, we consider it not image-based
-            
+
             if page_text.count(" ") > 1500:
                 return False            
     return True
@@ -1041,14 +1022,14 @@ def extract_text_from_pdf(pdf_file):
             # Extract header text
             header_text = page.extract_text(x_tolerance=2, y_tolerance=2, layout=True)
             header_text = header_text.split('\n')[0] if header_text else ""
-            
+
             # Extract main page text
             page_text = page.extract_text()
-            
+
             # Check for image-based content by ensuring the presence of text
             if not page_text and page.images:
                 page_text = "[Image-based content detected]"
-            
+
             if page_num == 0:
                 all_text += f"Header: {header_text.strip()} {page_text.strip() if page_text else ''}\n\n"
             else:
@@ -1098,7 +1079,7 @@ def is_image_based_docx(docx_file):
     try:
         import docx
         doc = docx.Document(docx_file)
-        
+
         # Check for InlineShapes (images) in the document
         has_images = False
         for paragraph in doc.paragraphs:
@@ -1107,13 +1088,13 @@ def is_image_based_docx(docx_file):
                     if run._element.findall('.//pic:pic', doc._element.nsmap):
                         has_images = True
                         break
-        
+
         # Also check if there's very little text content
         text_content = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
-        
+
         # If there are images and little text, it might need OCR
         return has_images and len(text_content.strip()) < 200
-        
+
     except Exception as e:
         print(f"Error checking DOCX for images: {e}")
         return False
@@ -1134,11 +1115,11 @@ def convert_docx_to_pdf(docx_file):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_dir_path = Path(temp_dir)
             temp_docx = temp_dir_path / "temp.docx"
-            
+
             # Save the uploaded file to temporary location
             with open(temp_docx, "wb") as f:
                 f.write(docx_file.getvalue())
-            
+
             # Convert to PDF using LibreOffice
             process = subprocess.Popen([
                 'libreoffice',
@@ -1149,116 +1130,116 @@ def convert_docx_to_pdf(docx_file):
                 temp_dir,
                 str(temp_docx)
             ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            
+
             process.wait()
-            
+
             # Check if the conversion was successful
             temp_pdf = temp_dir_path / "temp.pdf"
             if not temp_pdf.exists():
                 st.error("PDF conversion failed")
                 return None
-            
+
             # Read the generated PDF into BytesIO
             pdf_bytes = io.BytesIO()
             with open(temp_pdf, "rb") as f:
                 pdf_bytes.write(f.read())
-            
+
             # Reset pointer to start
             pdf_bytes.seek(0)
-            
+
             return pdf_bytes
-            
+
     except Exception as e:
         st.error(f"Error converting DOCX to PDF: {e}")
         return None
 
-# # def convert_docx_to_pdf(docx_file):
-#     """
-#     Convert DOCX file to PDF and return as BytesIO object
-#     """
-#     try:
-#         # Create a temporary directory
-#         with tempfile.TemporaryDirectory() as temp_dir:
-#             # Create paths for temporary files
-#             temp_docx = Path(temp_dir) / "temp.docx"
-#             temp_pdf = Path(temp_dir) / "temp.pdf"
-            
-#             # Save the uploaded file to temporary location
-#             with open(temp_docx, "wb") as f:
-#                 f.write(docx_file.getvalue())
-            
-#             # Initialize COM for docx2pdf
-#             pythoncom.CoInitialize()
-            
-#             # Convert to PDF
-#             convert(str(temp_docx), str(temp_pdf))
-            
-#             # Read the generated PDF into BytesIO
-#             pdf_bytes = io.BytesIO()
-#             with open(temp_pdf, "rb") as f:
-#                 pdf_bytes.write(f.read())
-            
-#             # Reset pointer to start
-#             pdf_bytes.seek(0)
-            
-#             return pdf_bytes
-            
-#     except Exception as e:
-#         print(f"Error converting DOCX to PDF: {e}")
-#         return None
-#     finally:
-#         # Uninitialize COM
-#         pythoncom.CoUninitialize()
 
-# def extract_text(file):
-#     if file is not None:
-#         if file.name.endswith('.pdf'):
-#             # Create a placeholder for the progress bar
-#             progress_placeholder = st.empty()
-            
-#             # Check if PDF is image-based
-#             if is_image_based_pdf(file):
-#                 with st.spinner('PDF is image-based. Running OCR... This may take a few minutes...'):
-#                     progress_bar = progress_placeholder.progress(0)
-                    
-#                     # Process OCR extraction
-#                     extracted_text = cached_process_ocr_pdf(file)
-                    
-#                     # Update progress
-#                     progress_bar.progress(100)
-#                     progress_placeholder.empty()
-                    
-#                     if extracted_text and any(extracted_text):
-#                         return " ".join(extracted_text)
-#                     else:
-#                         st.warning("OCR extraction failed. The PDF might contain unclear images.")
-#                         return None
-#             else:
-#                 # Normal PDF text extraction
-#                 return extract_text_from_pdf(file)
-            
-#         elif file.name.endswith('.docx'):
-#             progress_placeholder = st.empty()
-            
-#             if is_image_based_docx(file):
-#                 with st.spinner('DOCX contains images. Converting to PDF for OCR...'):
-#                     progress_bar = progress_placeholder.progress(0)
-                    
-#                     # Convert DOCX to PDF
-#                     pdf_file = convert_docx_to_pdf(file)
-#                     extracted_text = cached_process_ocr_pdf(pdf_file)
-#                     # Update progress
-#                     progress_bar.progress(100)
-#                     progress_placeholder.empty()
-                    
-#                     if extracted_text and any(extracted_text):
-#                         return " ".join(extracted_text)
-#                     else:
-#                         st.warning("DOCX to PDF conversion failed. Please try again.")
-#                         return None
-#             else:
-#                 return extract_text_from_docx(file)
-#     return None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def remove_suffix(s):
@@ -1298,7 +1279,7 @@ def text_summarizer_alternate(value):
     if there are number don''t put them into letters if they are 10 or above, keep them in numbers like 98 or if percentage : 98%.
     if defendant and plaintiff do not start a sentence then they should not be capitalized, even if they are capitlized in the legal decison, don''t capitlize unless it starts a sentence.
     Keep it between 195-375 tokens."""
-    
+
     context = context + """
     In your summary, please ensure the following key aspects are addressed:
     Legal Proceedings Accuracy: Detail the sequence and timing of key legal events, including pre-trial motions, trial proceedings, and post-trial decisions. Highlight any procedural nuances that are critical to understanding the case's context.   
@@ -1324,10 +1305,10 @@ def text_summarizer_alternate(value):
             {"role": "user", "content": value}
         ]
     )
-    
+
     summary_response = response.choices[0].message.content.strip()
     summary_response = ' '.join(summary_response.splitlines())
-    
+
     summary_response = summary_response.replace("$", "&#36;")
     # print("Request Parameters:", {
     # "model": GPTModel,
@@ -1358,7 +1339,7 @@ def abbreviate_title(title):
 def title(value):
 
     title_case=""
-    
+
     prompt_title = """
             Give the title of the legal case, take the current title first, then here are the rules : 
             If there are several defendants, just take the first one.
@@ -1386,11 +1367,11 @@ def title(value):
     )
     # print("new2")
     # print (title_response.choices[0].message.content)
-    
+
     title_case = title_response.choices[0].message.content
-    
+
     title_case = abbreviate_title(title_case)
-    
+
     # print(title_case + ' : NLP')
     return title_case
 
@@ -1398,7 +1379,7 @@ def Connecticut_summarizer(value):
     summary =""
     first_two_pages = extract_first_two_pages(value)
     name_case = title(first_two_pages)
-    
+
     summary = "CASE: " +  name_case + "  \n"
     prompt_court_option = ("""I will send you a legal decision and you will detect the court that ruled and return it according to a table, just the court name nothing else.
             Here is the structure of table :
@@ -1425,15 +1406,15 @@ def Connecticut_summarizer(value):
         {"role": "user", "content": first_two_pages}
         ]
     )
-    
+
     # print (court_response.choices[0].message.content)
     court_case = court_response.choices[0].message.content
-    
+
     prompt_num = """
             Give the number of the legal case, 
             just return the number as an answer nothing else
             """
-            
+
     num_response = client.chat.completions.create(
     model = GPTModel,
     temperature = 0.2,
@@ -1444,9 +1425,9 @@ def Connecticut_summarizer(value):
         ]
     )
     # print (num_response.choices[0].message.content)
-    
+
     num_case = num_response.choices[0].message.content
-    
+
     prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam. If it 's a federal case and district case, replace the first name by : U.S.D.J. Else if it 's a federal case and magistrate case, replace the first name by : U.S.M.J."
 
     judge_response = client.chat.completions.create(
@@ -1458,24 +1439,24 @@ def Connecticut_summarizer(value):
         {"role": "user", "content": first_two_pages}
         ]
     )
-            
+
     judge_name ="" 
-            
+
     if judge_response.choices[0].message.content =="per curiam" :
         judge_name = "per curiam"
     elif "U.S.D.J." in judge_response.choices[0].message.content:
         name = HumanName(judge_response.choices[0].message.content)
         judge_name = name.last + ", U.S.D.J."
-        
+
     elif "U.S.M.J." in judge_response.choices[0].message.content:
         name = HumanName(judge_response.choices[0].message.content)
         judge_name = name.last + ", U.S.M.J."
-                
+
     else:
         name = HumanName(judge_response.choices[0].message.content)
         judge_name = name.last + ", J."  #.capitalize()
-            
-    
+
+
     # print (judge_response.choices[0].message.content)
     date_response = client.chat.completions.create(
                 model=GPTModel,
@@ -1567,8 +1548,8 @@ def Connecticut_summarizer(value):
     )
     # print (taxonomy_response.choices[0].message.content)
     practice_area = taxonomy_response.choices[0].message.content
-    
-    
+
+
     prompt_practice = """
             I will give you a table with industries, read the legal case, give the industry of the legal case, just return the industry as an answer nothing else. Here is the table of industries:
             Accounting		
@@ -1612,7 +1593,7 @@ def Connecticut_summarizer(value):
             Transportation		
             Travel and Tourism		
             """
-                 
+
     practice_response = client.chat.completions.create(
     model = GPTModel,
     temperature = 0.2,
@@ -1623,7 +1604,7 @@ def Connecticut_summarizer(value):
         ]
     )
     # print (practice_response.choices[0].message.content)
-    
+
     practice_case = practice_response.choices[0].message.content
     prompt_title = "you are a US lawyer, and will read a legal decision and return the title of the case, only the title, nothing else, the title should describe in a sentence the case without mentioning the plaintiff and the defendants."
 
@@ -1660,14 +1641,14 @@ ROLE:
 
 def Texas_summarizer(value):
     summary =""
-    
+
     # Display the generated summary
     summary = text_summarizer_alternate(value)
     first_two_pages = extract_first_two_pages(value)
     # print(summary)
-    
+
     summary = summary.replace("District Court", "district court")
-    
+
     prompt_taxonomy = """ I will give you a table with taxonomy , read the legal case, You can use up to three taxonomies. The last topic is usually Civil Appeals or Criminal Appeals. The format is caps and lower case. Just return up to 3 taxonomies, separated by "│", example :  Wrongful Death│Civil Rights│Civil Appeals. Here is the table of taxonomy :
             Administrative Law
             Admiralty
@@ -1743,11 +1724,11 @@ def Texas_summarizer(value):
         ]
     )
     # print (taxonomy_response.choices[0].message.content)
-    
+
     summary = taxonomy_response.choices[0].message.content + "  \n" + summary
     summary = summary + "  \n" + title(first_two_pages)
-    
-    
+
+
     prompt_court_option = ("""I will send you a legal decision and you will detect the court that ruled and return it according to a table, just the court name nothing else.
             Here is the structure of table :
             Fifth Circuit
@@ -1770,9 +1751,9 @@ def Texas_summarizer(value):
     )
     # print (court_response.choices[0].message.content)
     summary = summary + ", " + court_response.choices[0].message.content
-    
+
     case_number = ('I will send you a legal decision and you will detect the case number and return it, just the case number nothing else ')
-            
+
     case_number_response = client.chat.completions.create(
     model = GPTModel,
     temperature = 0.2,
@@ -1783,10 +1764,10 @@ def Texas_summarizer(value):
         ]
     )
     # print (case_number_response.choices[0].message.content)
-    
+
     case_num = remove_suffix(case_number_response.choices[0].message.content)
     summary = summary + ", " + case_num
-    
+
     # Extract the court date
     date_response = client.chat.completions.create(
         model=GPTModel,
@@ -1801,10 +1782,10 @@ def Texas_summarizer(value):
     # Append the court date to the summary
     court_date = date_response.choices[0].message.content.strip()
     summary = summary + ", " + court_date
-               
-        
+
+
     return summary
-    
+
 
 # Function to validate if the input is a positive integer
 def is_positive_integer(value):
@@ -1819,7 +1800,7 @@ def is_positive_integer(value):
 #         st.session_state.extracted_text = None
 #     if 'processing_complete' not in st.session_state:
 #         st.session_state.processing_complete = False
-    
+
 # Define the Streamlit app
 def main():
     check_openai_key(OPENAI_API_KEY)
@@ -2129,10 +2110,10 @@ def main():
 
                         # Display the generated summary
                         summary = text_summarizer_alternate(user_input) 
-                    
-                        
+
+
                         # print(summary)
-                        
+
                         summary = summary.replace("District Court", "district court")
                         st.subheader("Summary:")
 
@@ -2172,10 +2153,10 @@ def main():
 
                         # Append the court date to the summary
                         court_date = date_response.choices[0].message.content.strip()
-                        
+
                         if court_type =="Federal":
                             summary = summary + " [Filed " + court_date + "]"
-                        
+
                         # judge
                         prompt_judge = "you are a US lawyer, and will read a legal decision and return the name of the judge, only the name, nothing else, in the format : Lastname, Firstname (only first letter of the Firstname). If the case is PER CURIAM, just return : per curiam. If it 's a federal case and district case, replace the first name by : U.S.D.J. Else if it 's a federal case and magistrate case, replace the first name by : U.S.M.J."
 
@@ -2188,28 +2169,28 @@ def main():
                             {"role": "user", "content": user_input}
                             ]
                         )
-                        
+
                         judge_name ="" 
-                        
+
                         if judge_response.choices[0].message.content =="per curiam" :
                             judge_name = "per curiam"
                         elif "U.S.D.J." in judge_response.choices[0].message.content:
                             name = HumanName(judge_response.choices[0].message.content)
                             judge_name = name.last + ", U.S.D.J."
-                            
+
                         elif "U.S.M.J." in judge_response.choices[0].message.content:
                             name = HumanName(judge_response.choices[0].message.content)
                             judge_name = name.last + ", U.S.M.J."
-                            
+
                         else:
                             name = HumanName(judge_response.choices[0].message.content)
                             judge_name = name.last + ", J."  #.capitalize()
-                        
+
                         summary = " (" + judge_name + ") (" + str(page_count) + " pp.) "  + summary 
                         # print (judge_response.choices[0].message.content)
-                        
+
                         # court option
-                        
+
                         courts = {
                                 'N.J.': 1,
                                 'N.J. Super. App. Div.': 2,
@@ -2222,7 +2203,7 @@ def main():
                                 }
                         courts_inverted = {value: key for key, value in courts.items()}
 
-                        
+
                         prompt_court_option = ('I will send you a legal decision and you have to select one of these court option, just return the corresponding number, nothing else, here are the court option :' 
                             'N.J. Sup. Ct. (Supreme Court) - 1 '
                             'N.J. Super. App. Div. (Appellate Division) 2 '
@@ -2232,7 +2213,7 @@ def main():
                             'Bankr. D.N.J. (U.S Bankruptcy Court 6 '
                             'D.N.J. (U.S. District Court) - 7 '
                             '3d Cir. (Third Circuit) - 8 ')
-                        
+
                         court_response = client.chat.completions.create(
                         model = GPTModel,
                         temperature = 0.2,
@@ -2244,12 +2225,12 @@ def main():
                         )
                         print (court_response.choices[0].message.content)
                         summary = courts_inverted[int(court_response.choices[0].message.content)] + " "  + summary
-                        
+
                         title_case = (f"*{title(first_two_pages)}*")
-                        
-                        
+
+
                         summary = title_case + ", "  + summary 
-                        
+
                         # taxonomy
                         prompt_taxonomy = """ I will give you a table with taxonomy , read the legal case, just return the corresponding number , nothing else. here is the table :
                             NJ topic #	NJ Taxonomy Topics
@@ -2314,7 +2295,7 @@ def main():
                         )
                         # print (taxonomy_response.choices[0].message.content)
                         summary = taxonomy_response.choices[0].message.content + "-" + court_response.choices[0].message.content + "-XXXX " + summary
-                        
+
                         hash_table = {
                             "01": "Administrative Law",
                             "54": "Admiralty",
@@ -2365,7 +2346,7 @@ def main():
                             "38": "Trusts and Estates",
                             "40": "Wrongful Death"
                         }
-                        
+
                         legal_category = hash_table.get(taxonomy_response.choices[0].message.content, "Unknown code").upper()
                         st.markdown(f"**{legal_category}**")
                         st.write(summary)
@@ -2377,7 +2358,7 @@ def main():
                         st.write(Texas_summarizer(user_input))
                     else:
                         st.warning("Please select a state before clicking 'Summarize'.")
-                
+
         elif app_mode == "Newsletter Quotes":
 
             def process_single_link(item):
@@ -2410,7 +2391,7 @@ def main():
                     background = newsletter_background.get('background', 'No background available')
                     quoted = newsletter_data.get('quoted', 'No quotes available')
                     extracted_topic = newsletter_topic.get('topic', 'No topic found from web content')
-                    
+
                     extracted_people_quotes = [
                         {
                             'name': person['name'],
@@ -2431,12 +2412,12 @@ def main():
                         'date': formatted_date,
                         'branch_head': item['branch_head']
                     }
-                
+
                 except KeyError as e:
                     st.warning(f"Error processing data for {item['link']}: Missing key {e}. Skipping...")
                 except Exception as e:
                     st.warning(f"An error occurred with {item['link']}: {e}. Skipping...")
-                
+
                 return None
 
             def process_data(uploaded_file):
@@ -2452,22 +2433,22 @@ def main():
                 # Read the Excel file
                 df = pd.read_excel(uploaded_file, header=None)
                 df.columns = ['A', 'B', 'C', 'D', 'E', 'F']
-                
+
                 # Filter and prepare items for processing
                 results = list(filter(None, df.apply(process_row, axis=1)))
-                
+
                 # Process links concurrently
                 with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
                     # Submit all tasks and collect futures
                     futures = [executor.submit(process_single_link, item) for item in results]
-                    
+
                     # Collect results as they complete
                     all_items = [
                         future.result() 
                         for future in concurrent.futures.as_completed(futures) 
                         if future.result() is not None
                     ]
-                
+
                 return all_items
 
 
@@ -2480,13 +2461,13 @@ def main():
             # Check if we already have the processed data in session state
             if 'processed_data' not in st.session_state:
                 st.session_state['processed_data'] = None
-                
+
             if 'file_uploader_key' not in st.session_state:
                 st.session_state.file_uploader_key = 0  
-                    
+
             if 'downloaded' not in st.session_state:
                 st.session_state['downloaded'] = False
-                
+
             if st.session_state['processed_data'] is None:
                 uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx", key=st.session_state.file_uploader_key)
 
@@ -2512,9 +2493,9 @@ def main():
                     ):
                         # Once the file is downloaded, set 'downloaded' to True
                         st.session_state['downloaded'] = True
-                        
+
                 process_button_placeholder = st.empty()
-                
+
                 if st.session_state['downloaded']:
                     if process_button_placeholder.button("Process New File"):
                         st.session_state['processed_data'] = None
@@ -2525,4 +2506,3 @@ def main():
 
 if __name__ == "__main__":
     ensure_nltk_data()
-    main()
