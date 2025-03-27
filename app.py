@@ -262,6 +262,20 @@ def handle_lazy_loading(soup: BeautifulSoup) -> None:
                 content = element[attr]
                 if content:
                     element.string = content
+                    
+def handle_selenium_fallback(url: str) -> Optional[str]:
+    """Handle Selenium fallback with environment detection."""
+    # Debug: Show environment variables in Streamlit Cloud
+    if "STREAMLIT_DEBUG_ENV" not in os.environ:
+        os.environ["STREAMLIT_DEBUG_ENV"] = "1"
+        st.write("Debug: Environment variables:", dict(os.environ))
+    
+    # Check if running on Streamlit Cloud (tentative check, refine after debug)
+    is_streamlit_cloud = "REPL_ID" in os.environ or "STREAMLIT_SERVER_PORT" in os.environ
+    if is_streamlit_cloud:
+        st.warning(f"Scraping failed for {url}. Selenium fallback is disabled on Streamlit Cloud.")
+        return None
+    return scrape_from_selenium(url)[0]  # Return content only
 
 def scrap_web(url: str) -> Optional[str]:
     """
@@ -298,12 +312,10 @@ def scrap_web(url: str) -> Optional[str]:
         # Step 6: Extract main content
         text = extract_main_content(soup)
         
-        # Step 7: Validate content
         if len(text) < 50 or not re.search(r'[.!?]', text):  # Check for proper sentences
-            # print(f"For URL: {url}. Content seems incomplete. Attempting to scrape with Selenium.")
-            return scrape_from_selenium(url)
+            print(f"For URL: {url}. Content seems incomplete. Attempting fallback.")
+            return handle_selenium_fallback(url)
         return text
-        
     except requests.exceptions.Timeout:
         print(f"For URL: {url}. Timeout occurred. Attempting to scrape with Selenium.")
         return scrape_from_selenium(url)
@@ -433,6 +445,7 @@ def find_main_content(driver) -> str:
     """Enhanced main content detection, limiting to 10,000 words"""
     try:
         content_scores = []
+        word_limit = 10000  # Define word_limit at function scope
         
         # Use advanced CSS selectors for content
         content_selectors = [
@@ -476,7 +489,6 @@ def find_main_content(driver) -> str:
             main_content = best_element.text
             
             # Limit to 10,000 words
-            word_limit = 10000
             words = main_content.split()
             if len(words) > word_limit:
                 main_content = ' '.join(words[:word_limit])
@@ -1157,94 +1169,6 @@ def convert_docx_to_pdf(docx_file):
     except Exception as e:
         st.error(f"Error converting DOCX to PDF: {e}")
         return None
-
-# # def convert_docx_to_pdf(docx_file):
-#     """
-#     Convert DOCX file to PDF and return as BytesIO object
-#     """
-#     try:
-#         # Create a temporary directory
-#         with tempfile.TemporaryDirectory() as temp_dir:
-#             # Create paths for temporary files
-#             temp_docx = Path(temp_dir) / "temp.docx"
-#             temp_pdf = Path(temp_dir) / "temp.pdf"
-            
-#             # Save the uploaded file to temporary location
-#             with open(temp_docx, "wb") as f:
-#                 f.write(docx_file.getvalue())
-            
-#             # Initialize COM for docx2pdf
-#             pythoncom.CoInitialize()
-            
-#             # Convert to PDF
-#             convert(str(temp_docx), str(temp_pdf))
-            
-#             # Read the generated PDF into BytesIO
-#             pdf_bytes = io.BytesIO()
-#             with open(temp_pdf, "rb") as f:
-#                 pdf_bytes.write(f.read())
-            
-#             # Reset pointer to start
-#             pdf_bytes.seek(0)
-            
-#             return pdf_bytes
-            
-#     except Exception as e:
-#         print(f"Error converting DOCX to PDF: {e}")
-#         return None
-#     finally:
-#         # Uninitialize COM
-#         pythoncom.CoUninitialize()
-
-# def extract_text(file):
-#     if file is not None:
-#         if file.name.endswith('.pdf'):
-#             # Create a placeholder for the progress bar
-#             progress_placeholder = st.empty()
-            
-#             # Check if PDF is image-based
-#             if is_image_based_pdf(file):
-#                 with st.spinner('PDF is image-based. Running OCR... This may take a few minutes...'):
-#                     progress_bar = progress_placeholder.progress(0)
-                    
-#                     # Process OCR extraction
-#                     extracted_text = cached_process_ocr_pdf(file)
-                    
-#                     # Update progress
-#                     progress_bar.progress(100)
-#                     progress_placeholder.empty()
-                    
-#                     if extracted_text and any(extracted_text):
-#                         return " ".join(extracted_text)
-#                     else:
-#                         st.warning("OCR extraction failed. The PDF might contain unclear images.")
-#                         return None
-#             else:
-#                 # Normal PDF text extraction
-#                 return extract_text_from_pdf(file)
-            
-#         elif file.name.endswith('.docx'):
-#             progress_placeholder = st.empty()
-            
-#             if is_image_based_docx(file):
-#                 with st.spinner('DOCX contains images. Converting to PDF for OCR...'):
-#                     progress_bar = progress_placeholder.progress(0)
-                    
-#                     # Convert DOCX to PDF
-#                     pdf_file = convert_docx_to_pdf(file)
-#                     extracted_text = cached_process_ocr_pdf(pdf_file)
-#                     # Update progress
-#                     progress_bar.progress(100)
-#                     progress_placeholder.empty()
-                    
-#                     if extracted_text and any(extracted_text):
-#                         return " ".join(extracted_text)
-#                     else:
-#                         st.warning("DOCX to PDF conversion failed. Please try again.")
-#                         return None
-#             else:
-#                 return extract_text_from_docx(file)
-#     return None
 
 
 def remove_suffix(s):
